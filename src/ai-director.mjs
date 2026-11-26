@@ -1,7 +1,8 @@
 import {writeFile,mkdir,readFile} from "node:fs/promises";
 import {resolve} from "node:path";
 import {pathToFileURL} from "node:url";
-import {acquirePexelsClip} from "./asset-acquisition.mjs";\nimport {synthesizeNarration} from "./voiceover.mjs";
+import {acquirePexelsClip} from "./asset-acquisition.mjs";
+import {synthesizeNarration} from "./voiceover.mjs";
 
 const SYSTEM=`You are an experienced documentary film director and editor. Create a detailed, factual scene-by-scene visual blueprint for an English-language YouTube documentary for a Western audience. Never fabricate facts. Use scene footage query descriptions that specify real-world cinematic imagery and camera framing. Never request reference-video footage, copyrighted movie footage, or named creators' protected works. Avoid generic repeated stock search terms. Output JSON only with {title,fps,scenes}. Each scene: {id,durationSeconds,narration,visualQuery,visual:{kind:"video",src:""},motion:{enter:"rise-fade"|"fade"|"none",scaleFrom:number},transition:{kind:"fade"|"cut",durationFrames:number},captions:[{startSeconds,endSeconds,text}],audio:[]}. Captions are short readable phrases timed within the scene; narration must be original. Include visualQuery for every scene. Keep scene durations between 4 and 12 seconds.`;
 export function validateDirectorOutput(data){
