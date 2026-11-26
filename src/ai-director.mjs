@@ -10,7 +10,8 @@ export function validateDirectorOutput(data){
  for(const [i,s] of data.scenes.entries()){
   if(!s.id||typeof s.narration!=="string"||!s.narration.trim()||!s.visualQuery)throw new Error(`Scene ${i+1} missing id, narration, or visual query`);
   if(!Number.isFinite(s.durationSeconds)||s.durationSeconds<4||s.durationSeconds>12)throw new Error(`Scene ${i+1} duration must be 4–12 seconds`);
-  s.id=String(s.id).replace(/[^a-zA-Z0-9_-]/g,"-").slice(0,60);\n  s.visual={kind:"video",src:"",title:s.visual?.title,subtitle:s.visual?.subtitle,eyebrow:s.visual?.eyebrow};\n  s.transition={kind:["fade","cut","wipe","slide","zoom"].includes(s.transition?.kind)?s.transition.kind:"fade",durationFrames:Math.max(0,Math.min(60,s.transition?.durationFrames??12))};\n  s.style={fontFamily:String(s.style?.fontFamily??"Arial, sans-serif"),titleColor:String(s.style?.titleColor??"#F4F7FB"),captionColor:String(s.style?.captionColor??"#FFFFFF"),titleSize:Math.max(24,Math.min(140,Number(s.style?.titleSize??72))),titleAlign:["left","center","right"].includes(s.style?.titleAlign)?s.style.titleAlign:"left",titleTop:Math.max(100,Math.min(800,Number(s.style?.titleTop??300)))};
+  s.id=String(s.id).replace(/[^a-zA-Z0-9_-]/g,"-").slice(0,60);
+  s.visual={kind:"video",src:"",title:s.visual?.title,subtitle:s.visual?.subtitle,eyebrow:s.visual?.eyebrow};\n  s.transition={kind:["fade","cut","wipe","slide","zoom"].includes(s.transition?.kind)?s.transition.kind:"fade",durationFrames:Math.max(0,Math.min(60,s.transition?.durationFrames??12))};\n  s.style={fontFamily:String(s.style?.fontFamily??"Arial, sans-serif"),titleColor:String(s.style?.titleColor??"#F4F7FB"),captionColor:String(s.style?.captionColor??"#FFFFFF"),titleSize:Math.max(24,Math.min(140,Number(s.style?.titleSize??72))),titleAlign:["left","center","right"].includes(s.style?.titleAlign)?s.style.titleAlign:"left",titleTop:Math.max(100,Math.min(800,Number(s.style?.titleTop??300)))};
   s.audio=[];
   s.captions=(s.captions??[]).map(c=>({...c,startSeconds:Math.max(0,c.startSeconds),endSeconds:Math.min(s.durationSeconds,c.endSeconds)})).filter(c=>c.endSeconds>c.startSeconds);
  }
@@ -25,7 +26,8 @@ export async function generateDirectorBlueprint({script,referenceStyleProfile=nu
  return validateDirectorOutput(JSON.parse(raw));
 }
 export async function createProductionProject({script,openaiKey,pexelsKey,outputDir="public/project",model,fetchImpl=fetch}){
- let referenceStyleProfile=null;try{referenceStyleProfile=JSON.parse(await readFile("data/REFERENCE-STYLE-PROFILE.json","utf8"));}catch{}\n const blueprint=await generateDirectorBlueprint({script,referenceStyleProfile,apiKey:openaiKey,model,fetchImpl});
+ let referenceStyleProfile=null;try{referenceStyleProfile=JSON.parse(await readFile("data/REFERENCE-STYLE-PROFILE.json","utf8"));}catch{}
+ const blueprint=await generateDirectorBlueprint({script,referenceStyleProfile,apiKey:openaiKey,model,fetchImpl});
  const assetRecords=[];
  for(const scene of blueprint.scenes){
   const asset=await acquirePexelsClip({query:scene.visualQuery,apiKey:pexelsKey,outputDirectory:resolve("public/assets"),fetchImpl});
