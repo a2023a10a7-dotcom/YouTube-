@@ -30,7 +30,15 @@ const SceneView:React.FC<{scene:SceneBlueprint;index:number;start:number}> = ({s
   {visual.title && <div style={{position:"absolute",left:125,top:300,opacity:introOpacity,transform:`translateY(${rise}px)`,fontSize:112,lineHeight:1.02,fontWeight:800,letterSpacing:-5,whiteSpace:"pre-line",maxWidth:1300,textShadow:"0 4px 35px #0008"}}>{visual.title}</div>}
   {visual.subtitle && <div style={{position:"absolute",left:135,top:650,fontSize:32,color:"#AAB5C8",opacity:introOpacity,maxWidth:1500}}>{visual.subtitle}</div>}
   {scene.captions?.map((cue,i)=>{const a=secondsToFrames(cue.startSeconds,fps),b=secondsToFrames(cue.endSeconds,fps); return frame>=a&&frame<b?<div key={i} style={{position:"absolute",bottom:155,left:180,right:180,textAlign:"center",fontSize:42,fontWeight:700,textShadow:"0 3px 8px #000",background:"#0007",padding:"14px 24px",borderRadius:10}}>{cue.text}</div>:null})}
-  {scene.audio?.map((layer,i)=><Sequence key={i} from={secondsToFrames(layer.startSeconds??0,fps)} durationInFrames={Math.max(1,length-secondsToFrames(layer.startSeconds??0,fps))}><Audio src={layer.src} volume={layer.volume??1} loop={layer.loop}/></Sequence>)}
+  {scene.audio?.map((layer,i)=>{
+    const audioStart=secondsToFrames(layer.startSeconds??0,fps);
+    const audioLength=secondsToFrames(layer.durationSeconds??(scene.durationSeconds-(layer.startSeconds??0)),fps);
+    const fadeIn=secondsToFrames(layer.fadeInSeconds??0,fps);
+    const fadeOut=secondsToFrames(layer.fadeOutSeconds??0,fps);
+    return <Sequence key={i} from={audioStart} durationInFrames={Math.max(1,Math.min(audioLength,length-audioStart))}>
+      <Audio src={layer.src} loop={layer.loop} volume={(f)=>interpolate(f,[0,Math.max(1,fadeIn),Math.max(1,audioLength-fadeOut),audioLength],[0,layer.volume??1,layer.volume??1,0],{extrapolateLeft:"clamp",extrapolateRight:"clamp"})}/>
+    </Sequence>;
+  })}
  </AbsoluteFill>;
 };
 
