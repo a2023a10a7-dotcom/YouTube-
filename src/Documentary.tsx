@@ -42,10 +42,10 @@ const SceneView:React.FC<{scene:SceneBlueprint;index:number;start:number}> = ({s
  </AbsoluteFill>;
 };
 
-export const Documentary:React.FC=()=>{
+export const Documentary:React.FC<{scenes?:SceneBlueprint[]}>=({scenes})=>{
  const {fps}=useVideoConfig();
  let cursor=0;
- const arranged=demoBlueprint.map(scene=>{const start=cursor;cursor+=secondsToFrames(scene.durationSeconds,fps);return {scene,start}});
+ const arranged=(scenes?.length?scenes:demoBlueprint).map(scene=>{const start=cursor;cursor+=secondsToFrames(scene.durationSeconds,fps);return {scene,start}});
  const frame=useCurrentFrame();
  const progress=Math.min(100,frame/(cursor-1)*100);
  const current=arranged.find(({start,scene})=>frame>=start&&frame<start+secondsToFrames(scene.durationSeconds,fps))?.scene;
