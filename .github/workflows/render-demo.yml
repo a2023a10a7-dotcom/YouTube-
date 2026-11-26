@@ -7,7 +7,7 @@ on:
         required: false
         type: string
       production_script:
-        description: "Documentary topic. Production mode researches, scripts, selects clips, narrates and renders. Requires OPENAI_API_KEY and PEXELS_API_KEY secrets."
+        description: "Documentary topic. Production uses OpenMontage multi-source footage retrieval, AI selection, narration and Remotion rendering. Requires OPENAI_API_KEY."
         required: false
         type: string
   push:
@@ -26,7 +26,7 @@ jobs:
         with:
           submodules: recursive
       - uses: actions/setup-python@v5
-        if: ${{ inputs.reference_urls != '' }}
+        if: ${{ inputs.reference_urls != '' || inputs.production_script != '' }}
         with:
           python-version: "3.11"
       - name: Install OpenMontage reference-analysis dependencies
