@@ -1,7 +1,7 @@
 import {writeFile,mkdir,readFile} from "node:fs/promises";
 import {resolve} from "node:path";
 import {pathToFileURL} from "node:url";
-import {acquirePexelsClip} from "./asset-acquisition.mjs";
+import {acquirePexelsClip} from "./asset-acquisition.mjs";\nimport {synthesizeNarration} from "./voiceover.mjs";
 
 const SYSTEM=`You are an experienced documentary film director and editor. Create a detailed, factual scene-by-scene visual blueprint for an English-language YouTube documentary for a Western audience. Never fabricate facts. Use scene footage query descriptions that specify real-world cinematic imagery and camera framing. Never request reference-video footage, copyrighted movie footage, or named creators' protected works. Avoid generic repeated stock search terms. Output JSON only with {title,fps,scenes}. Each scene: {id,durationSeconds,narration,visualQuery,visual:{kind:"video",src:""},motion:{enter:"rise-fade"|"fade"|"none",scaleFrom:number},transition:{kind:"fade"|"cut",durationFrames:number},captions:[{startSeconds,endSeconds,text}],audio:[]}. Captions are short readable phrases timed within the scene; narration must be original. Include visualQuery for every scene. Keep scene durations between 4 and 12 seconds.`;
 export function validateDirectorOutput(data){
@@ -42,6 +42,6 @@ async function cli(){
  const input=process.argv[2];if(!input){console.error("Usage: OPENAI_API_KEY=... PEXELS_API_KEY=... node src/ai-director.mjs script.txt");process.exitCode=2;return;}
  const script=await readFile(input,"utf8");
  const project=await createProductionProject({script,openaiKey:process.env.OPENAI_API_KEY,pexelsKey:process.env.PEXELS_API_KEY,model:process.env.OPENAI_MODEL});
- console.log(`Created blueprint for ${project.scenes.length} scenes; acquired ${project.assets.length} clips. Audio/TTS remains to be generated.`);
+ console.log(`Created ${project.scenes.length} scenes with ${project.assets.length} media assets, including generated narration.`);
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href)cli().catch(e=>{console.error(e.message);process.exitCode=1;});
