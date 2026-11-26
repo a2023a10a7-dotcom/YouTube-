@@ -35,7 +35,7 @@ jobs:
         run: |
           node --input-type=module -e '
             import { saveReferenceProfile } from "./src/reference-videos.mjs";
-            const urls = (process.env.YOUTUBE_REFERENCE_URLS || "").split(/\\s+/).filter(Boolean);
+            const urls = (process.env.YOUTUBE_REFERENCE_URLS || "").split(/\s+/).filter(Boolean);
             const profile = await saveReferenceProfile(urls);
             console.log(`Saved ${profile.referenceCount} reference URLs. Visual style is not yet analyzed.`);
           '
