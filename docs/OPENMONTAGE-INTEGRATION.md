@@ -39,7 +39,7 @@ This pipeline searches and retrieves real footage from supported stock and publi
 
 ## Important integration gaps — do not misrepresent them
 
-The upstream documentary manifest currently says `reference_input.supported: false`. Reference analysis exists as a separate meta-skill, but the documentary pipeline does not yet declare native reference-input support. Our existing `src/reference-videos.mjs` only validates/saves 3 or 5 YouTube URLs and public oEmbed metadata; it does **not** analyze full video frames, timing, transitions, typography, or audio. The existing thumbnail-analysis workflow is explicitly limited evidence.
+The upstream documentary manifest still says `reference_input.supported: false`; the local adapter bridges this gap without modifying upstream. `src/reference-video-analysis.mjs` invokes OpenMontage `VideoAnalyzer` for each of the 3 or 5 supplied URLs, then sends extracted keyframes plus measured scene timing, transcript availability and audio-energy evidence for visual interpretation. `src/ai-director.mjs` consumes the resulting evidence-backed style profile. `src/openmontage-assets.mjs` invokes OpenMontage `DirectClipSearch` across available stock/open-archive providers and asks the vision model to select one candidate per scene from retrieved thumbnails. Asset provenance is retained.
 
 Therefore this submodule integration is the upstream engine foundation, not proof that the end-to-end YouTube workflow is complete. The next adapter work must:
 1. Analyze each supplied reference using authorized, accessible frame/audio evidence and store evidence + confidence in the channel profile.
