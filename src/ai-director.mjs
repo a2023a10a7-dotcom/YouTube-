@@ -48,7 +48,7 @@ export async function createProductionProject({script,openaiKey,outputDir="publi
  return manifest;
 }
 async function cli(){
- const input=process.argv[2];if(!input){console.error("Usage: OPENAI_API_KEY=... PEXELS_API_KEY=... node src/ai-director.mjs script.txt");process.exitCode=2;return;}
+ const input=process.argv[2];if(!input){console.error("Usage: OPENAI_API_KEY=... node src/ai-director.mjs script.txt");process.exitCode=2;return;}
  const script=await readFile(input,"utf8");
  const project=await createProductionProject({script,openaiKey:process.env.OPENAI_API_KEY,pexelsKey:process.env.PEXELS_API_KEY,model:process.env.OPENAI_MODEL});
  console.log(`Created ${project.scenes.length} scenes with ${project.assets.length} media assets, including generated narration.`);
