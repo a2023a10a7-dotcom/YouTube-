@@ -13,12 +13,13 @@ export async function analyzeReferenceThumbnails({profile,apiKey,profilePath="da
  for(const key of Object.keys(result)){if(!result[key]?.summary||!Array.isArray(result[key]?.evidence))throw new Error("Missing evidence in thumbnail analysis for "+key);}
  const style={...profile.styleAnalysis,status:"partial_thumbnail_analysis",thumbnailAnalysis:result,unavailableEvidence:["full-video editing rhythm","cut and transition types","camera movement","shot composition outside thumbnails","audio/narration/music/sound design","full-video grading"]};
  profile.styleAnalysis=style;
- await writeFile(resolve("data/channel-profile.json"),JSON.stringify(profile,null,2)+"\n");
- await writeFile(resolve("data/REFERENCE-STYLE-PROFILE.json"),JSON.stringify(style,null,2)+"\n");
+ const outputDir=dirname(resolve(profilePath));await mkdir(outputDir,{recursive:true});
+ await writeFile(resolve(profilePath),JSON.stringify(profile,null,2)+"\\n");
+ await writeFile(resolve(outputDir,"REFERENCE-STYLE-PROFILE.json"),JSON.stringify(style,null,2)+"\\n");
  const lines=["# Reference thumbnail style analysis","","**Status:** Partial analysis based on thumbnail images only.",""];
  for(const [key,value] of Object.entries(result)){lines.push("## "+key,"",value.summary,"","Confidence: "+value.confidence,"","Evidence: "+value.evidence.join(", "),"","Limitations: "+value.limitations.join("; "),"");}
  lines.push("## Not analyzed from thumbnails","","",...style.unavailableEvidence.map(x=>"- "+x),"");
- await writeFile(resolve(outputDir,"REFERENCE-STYLE-PROFILE.md"),lines.join("\n"));
+ await writeFile(resolve(outputDir,"REFERENCE-STYLE-PROFILE.md"),lines.join("\\n"));
  return style;
 }
 async function cli(){const path=process.argv[2]??"data/channel-profile.json";const profile=JSON.parse(await readFile(path,"utf8"));const style=await analyzeReferenceThumbnails({profile,apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_MODEL});console.log("Thumbnail-only analysis saved. Full-video analysis remains unavailable for "+style.unavailableEvidence.length+" categories.");}
