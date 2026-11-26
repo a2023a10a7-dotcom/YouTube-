@@ -1,6 +1,11 @@
 name: Render demo video
 on:
   workflow_dispatch:
+    inputs:
+      reference_urls:
+        description: "Paste exactly 3 or 5 YouTube video URLs, one per line (optional)"
+        required: false
+        type: string
   push:
     paths:
       - "src/**"
@@ -19,7 +24,24 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm test
+      - name: Save supplied YouTube reference links
+        if: ${{ inputs.reference_urls != '' }}
+        env:
+          YOUTUBE_REFERENCE_URLS: ${{ inputs.reference_urls }}
+        run: |
+          node --input-type=module -e '
+            import { saveReferenceProfile } from "./src/reference-videos.mjs";
+            const urls = (process.env.YOUTUBE_REFERENCE_URLS || "").split(/\\s+/).filter(Boolean);
+            const profile = await saveReferenceProfile(urls);
+            console.log(`Saved ${profile.referenceCount} reference URLs; style analysis remains pending.`);
+          '
       - run: npm run render:demo
+      - name: Upload saved channel reference profile
+        if: hashFiles('data/channel-profile.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: channel-reference-profile
+          path: data/channel-profile.json
       - uses: actions/upload-artifact@v4
         with:
           name: documentary-demo-mp4
