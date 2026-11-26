@@ -1,10 +1,12 @@
 export type CaptionCue = {startSeconds:number; endSeconds:number; text:string};
 export type AudioLayer = {src:string; startSeconds?:number; durationSeconds?:number; volume?:number; loop?:boolean; fadeInSeconds?:number; fadeOutSeconds?:number};
+export type Soundtrack = {src:string; volume?:number; duckingVolume?:number; fadeInSeconds?:number; fadeOutSeconds?:number};
+export type SceneStyle = {fontFamily?:string; titleColor?:string; captionColor?:string; titleSize?:number; titleAlign?:"left"|"center"|"right"; titleTop?:number};
 export type Visual =
  | {kind:"graphic"; background:string; accent:string; eyebrow?:string; title:string; subtitle?:string}
  | {kind:"video"|"image"; src:string; background?:string; accent?:string; eyebrow?:string; title?:string; subtitle?:string};
 export type SceneBlueprint = {
- id:string; durationSeconds:number; visual:Visual;
+ id:string; durationSeconds:number; visual:Visual; style?:SceneStyle;
  motion?:{enter?:"rise-fade"|"fade"|"none";exit?:"fade"|"none";scaleFrom?:number};
  transition?:{kind:"fade"|"cut"|"wipe"|"slide"|"zoom";durationFrames?:number};
  audio?:AudioLayer[]; captions?:CaptionCue[];
