@@ -39,6 +39,12 @@ jobs:
             const profile = await saveReferenceProfile(urls);
             console.log(`Saved ${profile.referenceCount} reference URLs. Visual style is not yet analyzed.`);
           '
+      - name: Analyze reference thumbnails with AI (limited evidence)
+        if: ${{ inputs.reference_urls != '' && secrets.OPENAI_API_KEY != '' }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+        run: node src/reference-style-analysis.mjs data/channel-profile.json
       - name: Generate AI-directed scenes, stock footage, and voice narration
         if: ${{ inputs.production_script != '' }}
         env:
