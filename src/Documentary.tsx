@@ -44,14 +44,14 @@ const SceneView:React.FC<{scene:SceneBlueprint;index:number;start:number}> = ({s
  </AbsoluteFill>;
 };
 
-export const Documentary:React.FC<{scenes?:SceneBlueprint[]}>=({scenes})=>{
+export const Documentary:React.FC<{scenes?:SceneBlueprint[];soundtrack?:Soundtrack}>=({scenes,soundtrack})=>{
  const {fps}=useVideoConfig();
  let cursor=0;
  const arranged=(scenes?.length?scenes:demoBlueprint).map(scene=>{const start=cursor;cursor+=secondsToFrames(scene.durationSeconds,fps);return {scene,start}});
  const frame=useCurrentFrame();
  const progress=Math.min(100,frame/(cursor-1)*100);
- const current=arranged.find(({start,scene})=>frame>=start&&frame<start+secondsToFrames(scene.durationSeconds,fps))?.scene;
- return <AbsoluteFill style={{fontFamily:"Arial, sans-serif",background:"#080D18"}}>
+ const current=arranged.find(({start,scene})=>frame>=start&&frame<start+secondsToFrames(scene.durationSeconds,fps))?.scene;\n const musicVolume=soundtrack?interpolate(frame,[0,secondsToFrames(soundtrack.fadeInSeconds??4,fps),cursor-secondsToFrames(soundtrack.fadeOutSeconds??5,fps),cursor],[0,soundtrack.volume??.22,soundtrack.volume??.22,0],{extrapolateLeft:"clamp",extrapolateRight:"clamp"}):0;
+ return <AbsoluteFill style={{fontFamily:"Arial, sans-serif",background:"#080D18"}}>\n  {soundtrack?.src&&<Audio src={soundtrack.src} volume={(f)=>{const voiceActive=arranged.some(({scene,start})=>frame>=start&&frame<start+secondsToFrames(scene.durationSeconds,fps)&&(scene.audio??[]).length>0);return musicVolume*(voiceActive?(soundtrack.duckingVolume??.1)/(soundtrack.volume??.22):1);}}/>}
   {arranged.map(({scene,start},i)=><Sequence key={scene.id} from={start} durationInFrames={secondsToFrames(scene.durationSeconds,fps)}><SceneView scene={scene} index={i} start={start}/></Sequence>)}
   <div style={{position:"absolute",left:135,bottom:100,width:1650,height:3,background:"#263247"}}><div style={{height:3,width:`${progress}%`,background:current?.visual.accent??"#7CE7D4"}}/></div>
   <div style={{position:"absolute",right:135,bottom:125,fontSize:20,color:"#8391A8",letterSpacing:4}}>FIELD NOTES / {String(arranged.indexOf(arranged.find(x=>x.scene===current)??arranged[0])+1).padStart(3,"0")}</div>
