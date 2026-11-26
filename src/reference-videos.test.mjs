@@ -43,6 +43,10 @@ test("persists a profile and records metadata limitations honestly", async () =>
     assert.equal(profile.styleAnalysis.status, "pending");
     assert.equal(profile.references[0].analysis.status, "not_analyzed");
     assert.deepEqual(await readReferenceProfile(profilePath), profile);
+    assert.equal(profile.styleAnalysis.attributes.transitions.status, "not_assessed");
+    assert.match(await readFile(join(directory, "REFERENCE-STYLE-PROFILE.md"), "utf8"), /Awaiting authorized visual\/audio evidence/);
+    const styleJson = JSON.parse(await readFile(join(directory, "REFERENCE-STYLE-PROFILE.json"), "utf8"));
+    assert.equal(styleJson.attributes.audio.confidence, 0);
     const raw = await readFile(profilePath, "utf8");
     assert.match(raw, /No footage or audio was downloaded/);
   } finally {
