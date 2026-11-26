@@ -1,6 +1,8 @@
-import {readFile,stat,writeFile} from "node:fs/promises";
-import {resolve} from "node:path";\nimport {access} from "node:fs/promises";
+import {readFile,writeFile} from "node:fs/promises";
+import {resolve} from "node:path";
+import {access} from "node:fs/promises";
 import {spawn} from "node:child_process";
+
 export function validateProject(project){
  const errors=[],warnings=[];
  if(!Array.isArray(project.scenes)||!project.scenes.length)errors.push("Blueprint has no scenes");
