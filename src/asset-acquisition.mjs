@@ -10,11 +10,15 @@ export function relevanceScore(query,candidate){
  return score/q.size;
 }
 export function choosePexelsVideo(query,videos){
- const sorted=[...videos].map(v=>({v,score:relevanceScore(query,v)})).sort((a,b)=>b.score-a.score);
- const winner=sorted[0]; if(!winner||winner.score<=0)return null;
+ const sorted=[...videos].map(v=>({v,score:relevanceScore(query,v)})).sort((a,b)=>{
+   if(b.score!==a.score)return b.score-a.score;
+   const maxWidth=(v)=>(v.video_files??[]).reduce((m,f)=>Math.max(m,f.width??0),0);
+   return maxWidth(b.v)-maxWidth(a.v);
+ });
+ const winner=sorted[0]; if(!winner)return null;
  const files=(winner.v.video_files??[]).filter(f=>f.link&&f.file_type?.includes("mp4"));
  files.sort((a,b)=>(b.width??0)-(a.width??0));
- return files[0]?{video:winner.v,score:winner.score,file:files[0]}:null;
+ return files[0]?{video:winner.v,score:winner.score,file:files[0],rankingEvidence:winner.score>0?"metadata text overlap":"provider query order with resolution tie-break (no descriptive metadata)"}:null;
 }
 export async function acquirePexelsClip({query,apiKey,outputDirectory="public/assets",fetchImpl=fetch}){
  if(!apiKey)throw new Error("Pexels API key is required in PEXELS_API_KEY; never commit credentials.");
