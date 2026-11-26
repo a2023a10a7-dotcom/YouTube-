@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "title": "Blueprint-driven demo",
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "scenes": [
+    {
+      "id": "opening",
+      "durationSeconds": 5,
+      "visual": { "kind": "graphic", "background": "#080D18", "accent": "#7CE7D4", "eyebrow": "THE HIDDEN ENGINE", "title": "THE WORLD\\nIN NUMBERS", "subtitle": "A visual story, built frame by frame" },
+      "motion": { "enter": "rise-fade", "exit": "fade", "scaleFrom": 1.04 },
+      "transition": { "kind": "fade", "durationFrames": 12 },
+      "audio": [],
+      "captions": []
+    },
+    {
+      "id": "chapter",
+      "durationSeconds": 5,
+      "visual": { "kind": "graphic", "background": "#080D18", "accent": "#F5C66A", "eyebrow": "CHAPTER 01", "title": "EVERY NUMBER\\nTELLS A STORY", "subtitle": "Data becomes meaningful when we see the pattern." },
+      "motion": { "enter": "rise-fade", "exit": "fade", "scaleFrom": 1.04 },
+      "transition": { "kind": "fade", "durationFrames": 12 },
+      "audio": [],
+      "captions": []
+    },
+    {
+      "id": "outro",
+      "durationSeconds": 5,
+      "visual": { "kind": "graphic", "background": "#080D18", "accent": "#9DA8FF", "eyebrow": "THE BIG PICTURE", "title": "LOOK CLOSER.\\nTHINK BIGGER.", "subtitle": "A first render pipeline — the foundation for real documentaries." },
+      "motion": { "enter": "rise-fade", "exit": "fade", "scaleFrom": 1.04 },
+      "transition": { "kind": "fade", "durationFrames": 12 },
+      "audio": [],
+      "captions": []
+    }
+  ]
+}
