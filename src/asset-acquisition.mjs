@@ -56,7 +56,7 @@ async function cli(){
  let register=[];try{register=JSON.parse(await readFile(manifestPath,"utf8"));}catch{}
  register=register.filter(item=>item.assetId!==asset.assetId);register.push(asset);
  await mkdir(resolve("data"),{recursive:true});
- await writeFile(manifestPath,JSON.stringify(register,null,2)+"\\n");
+ await writeFile(manifestPath,JSON.stringify(register,null,2)+"\n);
  console.log(JSON.stringify(asset,null,2));
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href)cli().catch(error=>{console.error(error.message);process.exitCode=1;});
