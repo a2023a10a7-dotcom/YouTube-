@@ -1,5 +1,5 @@
 import {mkdir,writeFile} from "node:fs/promises";
-import {resolve,basename} from "node:path";
+import {resolve} from "node:path";\nimport {readFile,writeFile} from "node:fs/promises";\nimport {pathToFileURL} from "node:url";
 
 const API="https://api.pexels.com/videos/search";
 const tokenSet=(s)=>new Set(String(s??"").toLowerCase().replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(x=>x.length>2));
@@ -41,3 +41,16 @@ export async function acquirePexelsClip({query,apiKey,outputDirectory="public/as
  };
  return asset;
 }
+
+async function cli(){
+ const query=process.argv.slice(2).join(" ").trim();
+ if(!query){console.error('Usage: PEXELS_API_KEY=... node src/asset-acquisition.mjs "scene footage query"');process.exitCode=2;return;}
+ const asset=await acquirePexelsClip({query,apiKey:process.env.PEXELS_API_KEY});
+ const manifestPath=resolve("data/ASSET-REGISTER.json");
+ let register=[];try{register=JSON.parse(await readFile(manifestPath,"utf8"));}catch{}
+ register=register.filter(item=>item.assetId!==asset.assetId);register.push(asset);
+ await mkdir(resolve("data"),{recursive:true});
+ await writeFile(manifestPath,JSON.stringify(register,null,2)+"\\n");
+ console.log(JSON.stringify(asset,null,2));
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href)cli().catch(error=>{console.error(error.message);process.exitCode=1;});
