@@ -73,22 +73,55 @@ export async function saveReferenceProfile(urls, options = {}) {
       note: "oEmbed metadata is not visual or audio analysis. No footage or audio was downloaded.",
     },
   })));
+  const attributes = [
+    "editingRhythm", "transitions", "visualLanguage", "typography",
+    "colorAndLighting", "audio", "storyStructure",
+  ];
   const profile = {
     schemaVersion: 1,
     updatedAt: new Date().toISOString(),
     referenceCount: references.length,
     references,
     styleAnalysis: {
-      status: "pending",
+      status: "awaiting_authorized_media_evidence",
       evidenceAvailable: ["public oEmbed metadata when returned"],
       unavailableEvidence: ["frame-by-frame visual analysis", "shot timing", "transitions", "typography", "color grading", "audio and sound mix"],
+      attributes: Object.fromEntries(attributes.map((name) => [name, {
+        status: "not_assessed",
+        confidence: 0,
+        evidence: [],
+        limitations: ["Reference video frames/audio have not been inspected."],
+      }])),
       note: "A style profile must not infer visual or audio attributes from metadata alone.",
     },
   };
   await mkdir(dirname(profilePath), { recursive: true });
-  const temporaryPath = `${profilePath}.tmp`;
-  await writeFile(temporaryPath, `${JSON.stringify(profile, null, 2)}\n`, "utf8");
+  const temporaryPath = \`\${profilePath}.tmp\`;
+  await writeFile(temporaryPath, \`\${JSON.stringify(profile, null, 2)}\n\`, "utf8");
   await rename(temporaryPath, profilePath);
+  const outputDirectory = dirname(profilePath);
+  const styleJsonPath = resolve(outputDirectory, "REFERENCE-STYLE-PROFILE.json");
+  const styleMarkdownPath = resolve(outputDirectory, "REFERENCE-STYLE-PROFILE.md");
+  const styleMarkdown = [
+    "# Reference style profile",
+    "",
+    "**Status:** Awaiting authorized visual/audio evidence.",
+    "",
+    \`**References saved:** \${references.length}\`,
+    "",
+    "The available oEmbed metadata does not reveal editing rhythm, transitions, camera language, typography, grading, sound design, or story pacing. These attributes are intentionally unassessed (confidence 0) until evidence can be inspected.",
+    "",
+    "## Evidence limitations",
+    "",
+    ...profile.styleAnalysis.unavailableEvidence.map((item) => \`- \${item}\`),
+    "",
+    "Reference links are style references only. No reference footage or audio was downloaded or reused.",
+    "",
+  ].join("\n");
+  await Promise.all([
+    writeFile(styleJsonPath, \`\${JSON.stringify(profile.styleAnalysis, null, 2)}\n\`, "utf8"),
+    writeFile(styleMarkdownPath, styleMarkdown, "utf8"),
+  ]);
   return profile;
 }
 
