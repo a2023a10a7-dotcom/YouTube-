@@ -26,7 +26,6 @@ jobs:
         with:
           submodules: recursive
       - uses: actions/setup-python@v5
-        if: ${{ inputs.reference_urls != '' || inputs.production_script != '' }}
         with:
           python-version: "3.11"
       - name: Install OpenMontage reference-analysis dependencies
@@ -41,6 +40,8 @@ jobs:
           node-version: 24
       - run: npm install
       - run: npm test
+      - name: Syntax-check OpenMontage Python adapters
+        run: python -m py_compile scripts/openmontage_reference_analyzer.py scripts/openmontage_asset_search.py
       - name: Save supplied YouTube reference links
         if: ${{ inputs.reference_urls != '' }}
         env:
