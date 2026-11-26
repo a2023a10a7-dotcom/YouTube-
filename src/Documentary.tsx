@@ -1,6 +1,6 @@
 import React from "react";
 import {AbsoluteFill, Audio, Img, Sequence, Video, interpolate, useCurrentFrame, useVideoConfig} from "remotion";
-import {demoBlueprint, SceneBlueprint} from "./blueprint";
+import {demoBlueprint, SceneBlueprint, Soundtrack} from "./blueprint";
 
 const secondsToFrames=(seconds:number,fps:number)=>Math.round(seconds*fps);
 
