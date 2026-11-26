@@ -1,5 +1,5 @@
 import {readFile,stat,writeFile} from "node:fs/promises";
-import {resolve} from "node:path";
+import {resolve} from "node:path";\nimport {access} from "node:fs/promises";
 import {spawn} from "node:child_process";
 export function validateProject(project){
  const errors=[],warnings=[];
@@ -15,7 +15,7 @@ export function validateProject(project){
  for(const asset of project.assets??[])if(!asset.sourceUrl||!asset.licenseReference)errors.push("Asset missing provenance/license reference: "+asset.assetId);
  return {ok:errors.length===0,errors,warnings,sceneCount:project.scenes?.length??0,assetCount:project.assets?.length??0};
 }
-export async function inspectRenderedVideo(file,{requireAudio=false}={}){
+export async function verifyProjectAssetFiles(project){const missing=[];for(const asset of project.assets??[]){if(asset.localPath){try{await access(asset.localPath);}catch{missing.push(asset.localPath);}}}return missing;}\nexport async function inspectRenderedVideo(file,{requireAudio=false}={}){
  const result=await new Promise((resolveResult,reject)=>{const child=spawn("ffprobe",["-v","error","-show_entries","stream=codec_type,codec_name,width,height","-show_entries","format=duration","-of","json",file]);let out="",err="";child.stdout.on("data",d=>out+=d);child.stderr.on("data",d=>err+=d);child.on("error",reject);child.on("close",code=>code===0?resolveResult(JSON.parse(out)):reject(new Error(err||"ffprobe failed")));});
  const video=result.streams?.find(s=>s.codec_type==="video"),audio=result.streams?.find(s=>s.codec_type==="audio");
  const errors=[],warnings=[];
@@ -25,5 +25,5 @@ export async function inspectRenderedVideo(file,{requireAudio=false}={}){
  const duration=Number(result.format?.duration??0);if(!duration||duration<1)errors.push("Invalid or too-short output duration");
  return {ok:errors.length===0,errors,warnings,durationSeconds:duration,video,audio};
 }
-async function cli(){const path=process.argv[2]??"out/documentary.mp4";const projectPath=process.argv[3]??"public/project/blueprint.json";const project=JSON.parse(await readFile(projectPath,"utf8"));const projectQA=validateProject(project);const videoQA=await inspectRenderedVideo(path,{requireAudio:true});const result={project:projectQA,render:videoQA,checkedAt:new Date().toISOString()};await writeFile("public/project/QA-REPORT.json",JSON.stringify(result,null,2)+"\n");console.log(JSON.stringify(result,null,2));if(!projectQA.ok||!videoQA.ok)process.exitCode=1;}
+async function cli(){const path=process.argv[2]??"out/documentary.mp4";const projectPath=process.argv[3]??"public/project/blueprint.json";const project=JSON.parse(await readFile(projectPath,"utf8"));const projectQA=validateProject(project);const missingAssets=await verifyProjectAssetFiles(project);if(missingAssets.length){projectQA.ok=false;projectQA.errors.push(...missingAssets.map(p=>"Missing downloaded asset: "+p));}const videoQA=await inspectRenderedVideo(path,{requireAudio:true});const result={project:projectQA,render:videoQA,checkedAt:new Date().toISOString()};await writeFile("public/project/QA-REPORT.json",JSON.stringify(result,null,2)+"\n");console.log(JSON.stringify(result,null,2));if(!projectQA.ok||!videoQA.ok)process.exitCode=1;}
 if(process.argv[1]&&import.meta.url===new URL("file://"+resolve(process.argv[1])).href)cli().catch(e=>{console.error(e.message);process.exitCode=1;});
