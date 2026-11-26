@@ -58,7 +58,7 @@ jobs:
         if: ${{ inputs.reference_urls != '' }}
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4.1-mini' }}
         run: node src/reference-video-analysis.mjs
       - name: Generate AI-directed scenes, stock footage, and voice narration
         if: ${{ inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood')) }}
@@ -66,8 +66,9 @@ jobs:
           SCRIPT_TEXT: ${{ inputs.production_script }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
-          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
-          TTS_VOICE: ${{ secrets.TTS_VOICE }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4.1-mini' }}
+          OPENAI_RESEARCH_MODEL: ${{ secrets.OPENAI_RESEARCH_MODEL || 'gpt-4.1-mini' }}
+          TTS_VOICE: ${{ secrets.TTS_VOICE || 'alloy' }}
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
             echo "::error::Production mode requires OPENAI_API_KEY in repository Actions secrets."
