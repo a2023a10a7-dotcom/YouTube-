@@ -61,6 +61,9 @@ jobs:
           node --input-type=module -e 'import {writeFile} from "node:fs/promises"; await writeFile("production-script.txt", process.env.SCRIPT_TEXT);'
           node src/ai-director.mjs production-script.txt
           npm run render:project
+      - name: Verify production render and project asset provenance
+        if: ${{ inputs.production_script != '' }}
+        run: npm run qa:render
       - name: Render the technical demo when no script was supplied
         if: ${{ inputs.production_script == '' }}
         run: npm run render:demo
