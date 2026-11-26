@@ -6,6 +6,8 @@ import {spawn} from "node:child_process";
 export function validateProject(project){
  const errors=[],warnings=[];
  if(!Array.isArray(project.scenes)||!project.scenes.length)errors.push("Blueprint has no scenes");
+ const totalDuration=(project.scenes??[]).reduce((sum,scene)=>sum+(Number(scene.durationSeconds)||0),0);
+ if(totalDuration>180)errors.push('Documentary exceeds the 180-second maximum: '+totalDuration.toFixed(1)+' seconds');
  for(const scene of project.scenes??[]){
   if(!scene.id||!Number.isFinite(scene.durationSeconds)||scene.durationSeconds<=0)errors.push("Invalid scene timing/id: "+scene.id);
   if(!scene.visual?.src)errors.push("Scene has no visual source: "+scene.id);
@@ -25,7 +27,7 @@ export async function inspectRenderedVideo(file,{requireAudio=false}={}){
  if(!video)errors.push("Rendered file has no video stream");
  if(video&&(video.width!==1920||video.height!==1080))warnings.push("Video resolution is not 1920x1080");
  if(!audio){if(requireAudio)errors.push("No audio stream found in production render");else warnings.push("Render has no audio stream");}
- const duration=Number(result.format?.duration??0);if(!duration||duration<1)errors.push("Invalid or too-short output duration");
+ const duration=Number(result.format?.duration??0);if(!duration||duration<1)errors.push("Invalid or too-short output duration");if(duration>180)errors.push("Rendered video exceeds the 180-second maximum: "+duration.toFixed(1)+" seconds");
  return {ok:errors.length===0,errors,warnings,durationSeconds:duration,video,audio};
 }
 async function cli(){const path=process.argv[2]??"out/documentary.mp4";const projectPath=process.argv[3]??"public/project/blueprint.json";const project=JSON.parse(await readFile(projectPath,"utf8"));const projectQA=validateProject(project);const missingAssets=await verifyProjectAssetFiles(project);if(missingAssets.length){projectQA.ok=false;projectQA.errors.push(...missingAssets.map(p=>"Missing downloaded asset: "+p));}const videoQA=await inspectRenderedVideo(path,{requireAudio:true});const result={project:projectQA,render:videoQA,checkedAt:new Date().toISOString()};await writeFile("public/project/QA-REPORT.json",JSON.stringify(result,null,2)+"\n");console.log(JSON.stringify(result,null,2));if(!projectQA.ok||!videoQA.ok)process.exitCode=1;}
