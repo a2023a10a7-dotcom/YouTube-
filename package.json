@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "npm run typecheck && node --test src/*.test.mjs",
     "references:help": "node src/reference-videos.mjs help",
-    "references:list": "node src/reference-videos.mjs list"
+    "references:list": "node src/reference-videos.mjs list",
+    "render:project": "remotion render src/index.ts Documentary out/documentary.mp4 --props=public/project/props.json"
   },
   "dependencies": {
     "@remotion/cli": "4.0.409",
