@@ -96,8 +96,8 @@ export async function saveReferenceProfile(urls, options = {}) {
     },
   };
   await mkdir(dirname(profilePath), { recursive: true });
-  const temporaryPath = \`\${profilePath}.tmp\`;
-  await writeFile(temporaryPath, \`\${JSON.stringify(profile, null, 2)}\n\`, "utf8");
+  const temporaryPath = `${profilePath}.tmp`;
+  await writeFile(temporaryPath, `${JSON.stringify(profile, null, 2)}\n`, "utf8");
   await rename(temporaryPath, profilePath);
   const outputDirectory = dirname(profilePath);
   const styleJsonPath = resolve(outputDirectory, "REFERENCE-STYLE-PROFILE.json");
@@ -107,19 +107,19 @@ export async function saveReferenceProfile(urls, options = {}) {
     "",
     "**Status:** Awaiting authorized visual/audio evidence.",
     "",
-    \`**References saved:** \${references.length}\`,
+    `**References saved:** ${references.length}`,
     "",
     "The available oEmbed metadata does not reveal editing rhythm, transitions, camera language, typography, grading, sound design, or story pacing. These attributes are intentionally unassessed (confidence 0) until evidence can be inspected.",
     "",
     "## Evidence limitations",
     "",
-    ...profile.styleAnalysis.unavailableEvidence.map((item) => \`- \${item}\`),
+    ...profile.styleAnalysis.unavailableEvidence.map((item) => `- ${item}`),
     "",
     "Reference links are style references only. No reference footage or audio was downloaded or reused.",
     "",
   ].join("\n");
   await Promise.all([
-    writeFile(styleJsonPath, \`\${JSON.stringify(profile.styleAnalysis, null, 2)}\n\`, "utf8"),
+    writeFile(styleJsonPath, `${JSON.stringify(profile.styleAnalysis, null, 2)}\n`, "utf8"),
     writeFile(styleMarkdownPath, styleMarkdown, "utf8"),
   ]);
   return profile;
