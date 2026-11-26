@@ -1,0 +1,3 @@
+import test from "node:test";import assert from "node:assert/strict";import {validateProject} from "./qa.mjs";
+test("QA checks source, timings and provenance",()=>{const p={scenes:[{id:"s",durationSeconds:5,visual:{src:"/a.mp4"},captions:[{startSeconds:0,endSeconds:1,text:"x"}],audio:[{src:"/v.mp3"}]}],assets:[{assetId:"a",sourceUrl:"https://example.com",licenseReference:"license"}]};assert.equal(validateProject(p).ok,true);});
+test("QA flags missing visual source and bad cue",()=>{const p={scenes:[{id:"s",durationSeconds:4,visual:{src:""},captions:[{startSeconds:0,endSeconds:5,text:"x"}]}],assets:[]};const result=validateProject(p);assert.equal(result.ok,false);assert.ok(result.errors.length>=2);});
