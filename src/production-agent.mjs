@@ -22,10 +22,10 @@ export async function writeDocumentaryScript({topic,research,apiKey,model="gpt-4
  if(!script)throw new Error("Script writer returned no text.");
  return script;
 }
-export async function runProduction({topic,openaiKey,pexelsKey,outputDir="public/project",researchModel,scriptModel,fetchImpl=fetch}){
+export async function runProduction({topic,openaiKey,outputDir="public/project",researchModel,scriptModel,fetchImpl=fetch}){
  const research=await researchTopic({topic,apiKey:openaiKey,model:researchModel,fetchImpl});
  const script=await writeDocumentaryScript({topic,research,apiKey:openaiKey,model:scriptModel,fetchImpl});
- const project=await createProductionProject({script,openaiKey,pexelsKey,outputDir,model:scriptModel,fetchImpl});
+ const project=await createProductionProject({script,openaiKey,outputDir,model:scriptModel,fetchImpl});
  project.research=research;
  await writeFile(resolve(outputDir,"research.json"),JSON.stringify(research,null,2)+"\n");
  await writeFile(resolve(outputDir,"SOURCES.md"),["# Research sources","",...research.sources.map(s=>"- ["+s.title+"]("+s.url+")"),"","## Research notes","",research.report,""].join("\n"));
@@ -33,5 +33,5 @@ export async function runProduction({topic,openaiKey,pexelsKey,outputDir="public
  await writeFile(resolve(outputDir,"blueprint.json"),JSON.stringify(project,null,2)+"\n");
  return project;
 }
-async function cli(){const file=process.argv[2];if(!file){console.error("Usage: OPENAI_API_KEY=... PEXELS_API_KEY=... node src/production-agent.mjs topic.txt");process.exitCode=2;return;}const topic=(await readFile(file,"utf8")).trim();const project=await runProduction({topic,openaiKey:process.env.OPENAI_API_KEY,pexelsKey:process.env.PEXELS_API_KEY,researchModel:process.env.OPENAI_RESEARCH_MODEL,scriptModel:process.env.OPENAI_MODEL});console.log("Research and script complete. Generated "+project.scenes.length+" scenes and acquired "+project.assets.length+" media assets.");}
+async function cli(){const file=process.argv[2];if(!file){console.error("Usage: OPENAI_API_KEY=... node src/production-agent.mjs topic.txt");process.exitCode=2;return;}const topic=(await readFile(file,"utf8")).trim();const project=await runProduction({topic,openaiKey:process.env.OPENAI_API_KEY,researchModel:process.env.OPENAI_RESEARCH_MODEL,scriptModel:process.env.OPENAI_MODEL});console.log("Research and script complete. Generated "+project.scenes.length+" scenes and acquired "+project.assets.length+" media assets.");}
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href)cli().catch(e=>{console.error(e.message);process.exitCode=1;});
