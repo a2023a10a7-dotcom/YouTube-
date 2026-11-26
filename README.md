@@ -23,4 +23,4 @@ Blueprint-driven Remotion supports video/image/graphic visuals, title styling, c
 - Production render has not been run with live API keys in this repository, so the complete workflow is not yet proven.
 - The demo render is a technical sample, not a finished documentary.
 
-See [production workflow](docs/PRODUCTION-AGENT.md), [AI Director](docs/AI-DIRECTOR.md), [asset acquisition](docs/ASSET-ACQUISITION.md), and [QA](docs/DIRECTOR-BLUEPRINT.md).
+See [production workflow](docs/PRODUCTION-AGENT.md), [Director's Blueprint](docs/DIRECTOR-BLUEPRINT.md), [asset acquisition](docs/ASSET-ACQUISITION.md), and [QA](docs/DIRECTOR-BLUEPRINT.md).
