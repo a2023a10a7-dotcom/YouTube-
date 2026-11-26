@@ -11,7 +11,8 @@
     "references:help": "node src/reference-videos.mjs help",
     "references:list": "node src/reference-videos.mjs list",
     "render:project": "remotion render src/index.ts Documentary out/documentary.mp4 --props=public/project/props.json",
-    "qa:render": "node src/qa.mjs out/documentary.mp4 public/project/blueprint.json"
+    "qa:render": "node src/qa.mjs out/documentary.mp4 public/project/blueprint.json",
+    "production:topic": "node src/production-agent.mjs topic.txt"
   },
   "dependencies": {
     "@remotion/cli": "4.0.409",
