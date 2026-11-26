@@ -79,6 +79,7 @@ jobs:
           else
             cp data/production-topic.txt production-topic.txt
           fi
+          echo "Using research model: ${OPENAI_RESEARCH_MODEL}; production model: ${OPENAI_MODEL}"
           node src/production-agent.mjs production-topic.txt
           npm run render:project
       - name: Verify production render and project asset provenance
