@@ -1,5 +1,5 @@
 import {mkdir,writeFile} from "node:fs/promises";
-import {resolve} from "node:path";\nimport {readFile,writeFile} from "node:fs/promises";\nimport {pathToFileURL} from "node:url";
+import {resolve} from "node:path";\nimport {readFile} from "node:fs/promises";\nimport {pathToFileURL} from "node:url";
 
 const API="https://api.pexels.com/videos/search";
 const tokenSet=(s)=>new Set(String(s??"").toLowerCase().replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(x=>x.length>2));
