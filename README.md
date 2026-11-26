@@ -27,4 +27,4 @@ The current 15-second Remotion composition remains a technical demo, not a finis
 
 ## Open-source skills
 
-Selected YouTube creator skills are included under `.agents/skills/` with attribution and their original MIT license. See [third-party attribution and scope](third_party/youtube-agent-skill/README.md) and [the reference-link implementation notes](docs/REFERENCE-VIDEOS.md).
+Selected YouTube creator skills are included under `.agents/skills/` with attribution and their original MIT license. See [third-party attribution and scope](docs/OPEN_SOURCE_YOUTUBE_AGENT_SKILL.md) and [the reference-link implementation notes](docs/REFERENCE-VIDEOS.md).
