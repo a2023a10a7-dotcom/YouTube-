@@ -35,6 +35,9 @@ export async function createProductionProject({script,openaiKey,pexelsKey,output
   const asset=await acquirePexelsClip({query:scene.visualQuery,apiKey:pexelsKey,outputDirectory:resolve("public/assets"),fetchImpl});
   scene.visual.src=asset.publicPath;
   assetRecords.push(asset);
+  const voice=await synthesizeNarration({text:scene.narration,apiKey:openaiKey,voice:process.env.TTS_VOICE??"alloy",outputPath:resolve("public/assets","narration-"+scene.id+".mp3"),fetchImpl});
+  scene.audio=[{src:"/assets/narration-"+scene.id+".mp3",volume:1,fadeInSeconds:.08,fadeOutSeconds:.15}];
+  assetRecords.push({assetId:"voice-"+scene.id,source:"OpenAI TTS",sourceUrl:"https://platform.openai.com/docs/guides/text-to-speech",licenseReference:"Review applicable OpenAI API terms before publishing",localPath:voice.path,publicPath:scene.audio[0].src,voice:voice.voice,model:voice.model,bytes:voice.bytes});
  }
  const manifest={title:blueprint.title,createdAt:new Date().toISOString(),scenes:blueprint.scenes.map(s=>({id:s.id,durationSeconds:s.durationSeconds,narration:s.narration,visualQuery:s.visualQuery,visual:s.visual,motion:s.motion,transition:s.transition,captions:s.captions,audio:s.audio})),assets:assetRecords};
  await mkdir(outputDir,{recursive:true});
