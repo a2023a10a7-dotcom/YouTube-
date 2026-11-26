@@ -1,7 +1,7 @@
 import {writeFile,mkdir,readFile} from "node:fs/promises";
 import {resolve} from "node:path";
 import {pathToFileURL} from "node:url";
-import {acquirePexelsClip} from "./asset-acquisition.mjs";
+import {acquireOpenMontageAssets} from "./openmontage-assets.mjs";
 import {synthesizeNarration} from "./voiceover.mjs";
 import {generateAmbientScore} from "./ambient-score.mjs";
 
@@ -28,14 +28,11 @@ export async function generateDirectorBlueprint({script,referenceStyleProfile=nu
  if(!raw)throw new Error("AI Director response contained no JSON content.");
  return validateDirectorOutput(JSON.parse(raw));
 }
-export async function createProductionProject({script,openaiKey,pexelsKey,outputDir="public/project",model,fetchImpl=fetch}){
+export async function createProductionProject({script,openaiKey,outputDir="public/project",model,fetchImpl=fetch}){
  let referenceStyleProfile=null;try{referenceStyleProfile=JSON.parse(await readFile("data/REFERENCE-STYLE-PROFILE.json","utf8"));}catch{}
  const blueprint=await generateDirectorBlueprint({script,referenceStyleProfile,apiKey:openaiKey,model,fetchImpl});
- const assetRecords=[];
+ const assetRecords=await acquireOpenMontageAssets({scenes:blueprint.scenes,apiKey:openaiKey,model,fetchImpl});
  for(const scene of blueprint.scenes){
-  const asset=await acquirePexelsClip({query:scene.visualQuery,apiKey:pexelsKey,outputDirectory:resolve("public/assets"),fetchImpl});
-  scene.visual.src=asset.publicPath;
-  assetRecords.push(asset);
   const voice=await synthesizeNarration({text:scene.narration,apiKey:openaiKey,voice:process.env.TTS_VOICE??"alloy",outputPath:resolve("public/assets","narration-"+scene.id+".mp3"),fetchImpl});
   scene.audio=[{src:"/assets/narration-"+scene.id+".mp3",volume:1,fadeInSeconds:.08,fadeOutSeconds:.15}];
   assetRecords.push({assetId:"voice-"+scene.id,source:"OpenAI TTS",sourceUrl:"https://platform.openai.com/docs/guides/text-to-speech",licenseReference:"Review applicable OpenAI API terms before publishing",localPath:voice.path,publicPath:scene.audio[0].src,voice:voice.voice,model:voice.model,bytes:voice.bytes});
