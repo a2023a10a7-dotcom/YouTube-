@@ -1,30 +1,26 @@
 # YouTube Agent — production workspace
 
-This repository is the production workspace for an autonomous English-language documentary video agent. It currently contains a Remotion demo renderer and the first implementation of YouTube reference-link management.
+The workflow has two modes: a 15-second technical demo, and a topic-only production path (requires API credentials).
 
-## Add 3 or 5 YouTube reference videos
+## Production from a topic
+1. Open [Actions → Documentary production pipeline](https://github.com/a2023a10a7-dotcom/YouTube-/actions/workflows/render-demo.yml).
+2. Run the workflow and enter a topic in `production_script` (the field accepts a topic, not only a script).
+3. Production mode requires the repository Actions secrets `OPENAI_API_KEY` and `PEXELS_API_KEY`. Optional `OPENAI_MODEL`, `OPENAI_RESEARCH_MODEL`, and `TTS_VOICE` customize models/voice.
+4. It researches with web search, drafts narration, creates scenes, searches/downloads stock video, generates voiceover, renders, and runs QA. Artifacts include MP4, source register, research, and project files.
 
-1. Open the repository's **Actions** tab.
-2. Select **Render demo video**.
-3. Choose **Run workflow**.
-4. Paste exactly 3 or 5 YouTube video links into **reference_urls**, one link per line.
-5. Start the workflow.
+## Reference videos
+Enter exactly 3 or 5 YouTube URLs in `reference_urls`. The profile saves URLs and available oEmbed metadata. If `OPENAI_API_KEY` is set, the workflow can analyze thumbnails only (composition/color/thumbnail typography/mood). It cannot infer full-video editing rhythm, transitions, motion, audio, or in-video grading from thumbnails. See [reference analysis limits](docs/REFERENCE-STYLE-ANALYSIS.md).
 
-The workflow validates the links, attempts to resolve public YouTube oEmbed metadata, and uploads a `channel-reference-profile` artifact. It also renders and uploads the current demo MP4.
+## Implemented renderer
+Blueprint-driven Remotion supports video/image/graphic visuals, title styling, captions, fade/cut/wipe/slide/zoom transitions, voice/audio layers, looping and fades.
 
-Supported link forms: standard YouTube watch URLs, youtu.be, Shorts, embed, and live URLs. Duplicate or invalid links are rejected.
+## Limits and safety
+- Footage selection uses Pexels query results with a heuristic rank (text match when metadata exists, provider result order and resolution otherwise). It is not semantic vision selection.
+- Source and license/usage references are recorded, but they still require review before monetized publication.
+- No reference footage is downloaded or reused.
+- Research citations are saved for editorial review; generated narration is not a guarantee of factual accuracy.
+- Background music and sound-effects acquisition/mixing are not yet implemented.
+- Production render has not been run with live API keys in this repository, so the complete workflow is not yet proven.
+- The demo render is a technical sample, not a finished documentary.
 
-## What this stage does — and does not do
-
-- Saves canonical reference URLs and available title/channel/thumbnail metadata.
-- Generates `REFERENCE-STYLE-PROFILE.json` and `.md` with evidence and confidence fields.
-- Marks visual/audio style attributes as **not assessed** until authorized evidence is available.
-- Does **not** download reference videos/audio, bypass DRM, or copy reference footage.
-- Does **not yet** infer actual cuts, transitions, shot rhythm, camera language, typography, grading, narration, music, or sound design.
-- The profile artifact is a workflow output, not yet a durable cross-run channel database.
-
-The current 15-second Remotion composition remains a technical demo, not a finished documentary. Autonomous rights-cleared footage selection, AI script/research, voiceover, music, scene-by-scene Director's Blueprint, full editing integration, and final-video QA remain production milestones.
-
-## Open-source skills
-
-Selected YouTube creator skills are included under `.agents/skills/` with attribution and their original MIT license. See [third-party attribution and scope](docs/OPEN_SOURCE_YOUTUBE_AGENT_SKILL.md) and [the reference-link implementation notes](docs/REFERENCE-VIDEOS.md).
+See [production workflow](docs/PRODUCTION-AGENT.md), [AI Director](docs/AI-DIRECTOR.md), [asset acquisition](docs/ASSET-ACQUISITION.md), and [QA](docs/DIRECTOR-BLUEPRINT.md).
