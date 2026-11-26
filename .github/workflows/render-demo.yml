@@ -25,6 +25,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - uses: actions/setup-python@v5
+        if: ${{ inputs.reference_urls != '' }}
+        with:
+          python-version: "3.11"
+      - name: Install OpenMontage reference-analysis dependencies
+        if: ${{ inputs.reference_urls != '' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install yt-dlp youtube-transcript-api "scenedetect[opencv]"
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -41,12 +52,12 @@ jobs:
             const profile = await saveReferenceProfile(urls);
             console.log(`Saved ${profile.referenceCount} reference URLs. Visual style is not yet analyzed.`);
           '
-      - name: Analyze reference thumbnails with AI (limited evidence)
+      - name: Analyze full reference videos with OpenMontage
         if: ${{ inputs.reference_urls != '' }}
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
-        run: node src/reference-style-analysis.mjs data/channel-profile.json
+        run: node src/reference-video-analysis.mjs
       - name: Generate AI-directed scenes, stock footage, and voice narration
         if: ${{ inputs.production_script != '' }}
         env:
