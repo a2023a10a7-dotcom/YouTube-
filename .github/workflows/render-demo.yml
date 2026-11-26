@@ -41,7 +41,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: channel-reference-profile
-          path: data/channel-profile.json
+          path: data/
       - uses: actions/upload-artifact@v4
         with:
           name: documentary-demo-mp4
