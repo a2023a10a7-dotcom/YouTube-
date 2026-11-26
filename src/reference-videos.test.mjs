@@ -40,7 +40,7 @@ test("persists a profile and records metadata limitations honestly", async () =>
     });
     assert.equal(profile.referenceCount, 3);
     assert.equal(profile.references[0].metadata.title, "Sample documentary");
-    assert.equal(profile.styleAnalysis.status, "pending");
+    assert.equal(profile.styleAnalysis.status, "awaiting_authorized_media_evidence");
     assert.equal(profile.references[0].analysis.status, "not_analyzed");
     assert.deepEqual(await readReferenceProfile(profilePath), profile);
     assert.equal(profile.styleAnalysis.attributes.transitions.status, "not_assessed");
