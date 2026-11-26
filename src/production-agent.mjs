@@ -3,7 +3,7 @@ import {resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 import {createProductionProject} from "./ai-director.mjs";
 const collectOutput=(response)=>{for(const item of response.output??[]){if(item.type==="message")for(const part of item.content??[])if(part.type==="output_text")return part.text;}return response.output_text??"";};
-export async function researchTopic({topic,apiKey,model="gpt-6.2-astra",fetchImpl=fetch}){
+export async function researchTopic({topic,apiKey,model="gpt-4.1-mini",fetchImpl=fetch}){
  if(!apiKey)throw new Error("OPENAI_API_KEY missing for research.");
  const prompt="Research this documentary topic thoroughly for an English-language YouTube audience. Search the web. Return a concise evidence report: factual claims, dates, caveats, disagreements, and at least 6 reliable source URLs with titles. Prefer primary sources, government/university/museum/scientific sources and reputable journalism. Avoid fabricated citations. Topic: "+topic;
  const response=await fetchImpl("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:"Bearer "+apiKey,"Content-Type":"application/json"},body:JSON.stringify({model,tools:[{type:"web_search",search_context_size:"high"}],tool_choice:"required",include:["web_search_call.action.sources"],input:prompt})});
