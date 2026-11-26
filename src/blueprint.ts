@@ -1,5 +1,5 @@
 export type CaptionCue = {startSeconds:number; endSeconds:number; text:string};
-export type AudioLayer = {src:string; startSeconds?:number; volume?:number; loop?:boolean; fadeInSeconds?:number; fadeOutSeconds?:number};
+export type AudioLayer = {src:string; startSeconds?:number; durationSeconds?:number; volume?:number; loop?:boolean; fadeInSeconds?:number; fadeOutSeconds?:number};
 export type Visual = {kind:"graphic"; background:string; accent:string; eyebrow?:string; title:string; subtitle?:string}
  | {kind:"video"|"image"; src:string; background?:string; accent?:string; eyebrow?:string; title?:string; subtitle?:string};
 export type SceneBlueprint = {id:string;durationSeconds:number;visual:Visual;motion?:{enter?:"rise-fade"|"fade"|"none";exit?:"fade"|"none";scaleFrom?:number};transition?:{kind:"fade"|"cut";durationFrames?:number};audio?:AudioLayer[];captions?:CaptionCue[]};
