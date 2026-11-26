@@ -1,5 +1,6 @@
 import {readFile,writeFile} from "node:fs/promises";
-import {resolve,dirname} from "node:path";\nimport {mkdir} from "node:fs/promises";
+import {resolve,dirname} from "node:path";
+import {mkdir} from "node:fs/promises";
 const PROMPT="Analyze only the supplied YouTube thumbnail images, not video contents. Return JSON with observations for thumbnailComposition, thumbnailColor, thumbnailTypography, thumbnailVisualMood. Each property: {summary,confidence,evidence,limitations}. Confidence 0..1. Cite thumbnail index. Do not infer cuts, shot length, transitions, camera motion, narration, music, sound effects, or full-video grading from thumbnails. State that thumbnail analysis is not full video style analysis.";
 export async function analyzeReferenceThumbnails({profile,apiKey,profilePath="data/channel-profile.json",model="gpt-4.1-mini",fetchImpl=fetch}){
  const refs=(profile.references??[]).filter(r=>r.metadata?.thumbnail_url);
