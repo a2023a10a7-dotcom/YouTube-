@@ -3,8 +3,11 @@ import {resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 import {createProductionProject} from "./ai-director.mjs";
 const collectOutput=(response)=>{for(const item of response.output??[]){if(item.type==="message")for(const part of item.content??[])if(part.type==="output_text")return part.text;}return response.output_text??"";};
-export async function researchTopic({topic,apiKey,model="gpt-4.1-mini",fetchImpl=fetch}){
+const DEFAULT_MODEL="gpt-4.1-mini";
+const selectModel=(value,fallback=DEFAULT_MODEL)=>typeof value==="string"&&value.trim()?value.trim():fallback;
+export async function researchTopic({topic,apiKey,model=DEFAULT_MODEL,fetchImpl=fetch}){
  if(!apiKey)throw new Error("OPENAI_API_KEY missing for research.");
+ model=selectModel(model);
  const prompt="Research this documentary topic thoroughly for an English-language YouTube audience. Search the web. Return a concise evidence report: factual claims, dates, caveats, disagreements, and at least 6 reliable source URLs with titles. Prefer primary sources, government/university/museum/scientific sources and reputable journalism. Avoid fabricated citations. Topic: "+topic;
  const response=await fetchImpl("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:"Bearer "+apiKey,"Content-Type":"application/json"},body:JSON.stringify({model,tools:[{type:"web_search",search_context_size:"high"}],tool_choice:"required",include:["web_search_call.action.sources"],input:prompt})});
  if(!response.ok)throw new Error("Research API failed HTTP "+response.status+": "+await response.text());
@@ -15,7 +18,9 @@ export async function researchTopic({topic,apiKey,model="gpt-4.1-mini",fetchImpl
  const unique=[...new Map(sources.filter(s=>s.url).map(s=>[s.url,s])).values()];
  return {topic,createdAt:new Date().toISOString(),report:text,sources:unique,model,webSearchUsed:(result.output??[]).some(x=>x.type==="web_search_call")};
 }
-export async function writeDocumentaryScript({topic,research,apiKey,model="gpt-4.1-mini",fetchImpl=fetch}){
+export async function writeDocumentaryScript({topic,research,apiKey,model=DEFAULT_MODEL,fetchImpl=fetch}){
+ if(!apiKey)throw new Error("OPENAI_API_KEY missing for script writing.");
+ model=selectModel(model);
  const response=await fetchImpl("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{Authorization:"Bearer "+apiKey,"Content-Type":"application/json"},body:JSON.stringify({model,temperature:.55,messages:[{role:"system",content:"Write a compelling, natural English documentary narration for a Western YouTube audience. Target 260-320 spoken words for a finished documentary of 2 minutes 15 seconds to 2 minutes 45 seconds. This is a hard maximum of 180 seconds including transitions. Start with a strong hook, build a clear narrative arc, use concrete imagery, avoid padding, and use only claims supported by the supplied research report. Do not invent facts or cite sources aloud. Include chapter transitions. Output only narration, no production directions."},{role:"user",content:"Topic: "+topic+"\\n\\nResearch notes with sources:\\n"+research.report+"\\n\\nSource URLs:\\n"+research.sources.map(s=>s.title+" — "+s.url).join("\\n")} ]})});
  if(!response.ok)throw new Error("Script-writing API failed HTTP "+response.status+": "+await response.text());
  const json=await response.json(),script=json.choices?.[0]?.message?.content?.trim();
@@ -23,9 +28,11 @@ export async function writeDocumentaryScript({topic,research,apiKey,model="gpt-4
  return script;
 }
 export async function runProduction({topic,openaiKey,outputDir="public/project",researchModel,scriptModel,fetchImpl=fetch}){
- const research=await researchTopic({topic,apiKey:openaiKey,model:researchModel,fetchImpl});
- const script=await writeDocumentaryScript({topic,research,apiKey:openaiKey,model:scriptModel,fetchImpl});
- const project=await createProductionProject({script,openaiKey,outputDir,model:scriptModel,fetchImpl});
+ const selectedResearchModel=selectModel(researchModel);
+ const selectedScriptModel=selectModel(scriptModel);
+ const research=await researchTopic({topic,apiKey:openaiKey,model:selectedResearchModel,fetchImpl});
+ const script=await writeDocumentaryScript({topic,research,apiKey:openaiKey,model:selectedScriptModel,fetchImpl});
+ const project=await createProductionProject({script,openaiKey,outputDir,model:selectedScriptModel,fetchImpl});
  project.research=research;
  await writeFile(resolve(outputDir,"research.json"),JSON.stringify(research,null,2)+"\n");
  await writeFile(resolve(outputDir,"SOURCES.md"),["# Research sources","",...research.sources.map(s=>"- ["+s.title+"]("+s.url+")"),"","## Research notes","",research.report,""].join("\n"));
