@@ -23,7 +23,7 @@ test("rejects non-YouTube hosts, non-HTTPS URLs, and malformed video IDs", () =>
 
 test("requires exactly 3 or 5 unique videos", () => {
   assert.throws(() => normalizeReferenceUrls(links.slice(0, 2)), /exactly 3 or exactly 5/);
-  assert.throws(() => normalizeReferenceUrls([...links, links[0]]), /Duplicate/);
+  assert.throws(() => normalizeReferenceUrls([links[0], links[1], links[0]]), /Duplicate/);
   assert.equal(normalizeReferenceUrls(ids.map((id) => `https://youtu.be/${id}`)).length, 5);
 });
 
