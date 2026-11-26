@@ -8,9 +8,11 @@ const SceneView:React.FC<{scene:SceneBlueprint;index:number;start:number}> = ({s
  const frame=useCurrentFrame(); const {fps,durationInFrames}=useVideoConfig();
  const length=secondsToFrames(scene.durationSeconds,fps);
  const transitionFrames=Math.min(scene.transition?.durationFrames??0,Math.floor(length/3));
- const opacity=scene.transition?.kind==="fade"
-  ? interpolate(frame,[0,transitionFrames,length-transitionFrames,length],[0,1,1,0],{extrapolateLeft:"clamp",extrapolateRight:"clamp"})
-  : 1;
+ const isFade=scene.transition?.kind==="fade";
+ const opacity=isFade?interpolate(frame,[0,transitionFrames,length-transitionFrames,length],[0,1,1,0],{extrapolateLeft:"clamp",extrapolateRight:"clamp"}):1;
+ const transitionProgress=interpolate(frame,[0,Math.max(1,transitionFrames)],[0,1],{extrapolateLeft:"clamp",extrapolateRight:"clamp"});
+ const transitionTransform=scene.transition?.kind==="slide"?`translateX(${interpolate(frame,[0,Math.max(1,transitionFrames)],[100,0],{extrapolateRight:"clamp"})}%)`:scene.transition?.kind==="zoom"?`scale(${interpolate(frame,[0,Math.max(1,transitionFrames)],[1.18,1],{extrapolateRight:"clamp"})})`:"none";
+ const transitionClip=scene.transition?.kind==="wipe"?`inset(0 ${100-transitionProgress*100}% 0 0)`:"none";
  const entrance=scene.motion?.enter==="rise-fade";
  const introOpacity=entrance?interpolate(frame,[0,Math.min(24,length)],[0,1],{extrapolateRight:"clamp"}):1;
  const rise=entrance?interpolate(frame,[0,24],[45,0],{extrapolateRight:"clamp"}):0;
@@ -19,7 +21,7 @@ const SceneView:React.FC<{scene:SceneBlueprint;index:number;start:number}> = ({s
  const visual=scene.visual;
  const accent=visual.accent??"#7CE7D4";
  const background=visual.background??"#080D18";
- return <AbsoluteFill style={{background,color:"#F4F7FB",overflow:"hidden",opacity}}>
+ return <AbsoluteFill style={{background,color:"#F4F7FB",overflow:"hidden",opacity,transform:transitionTransform,clipPath:transitionClip}}>
   {visual.kind==="video" && <Video src={visual.src} style={{width:"100%",height:"100%",objectFit:"cover",transform:`scale(${zoom})`}} />}
   {visual.kind==="image" && <Img src={visual.src} style={{width:"100%",height:"100%",objectFit:"cover",transform:`scale(${zoom})`}} />}
   {visual.kind==="graphic" && <AbsoluteFill style={{background}}>
