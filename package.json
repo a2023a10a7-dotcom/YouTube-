@@ -7,7 +7,7 @@
     "studio": "remotion studio src/index.ts",
     "render:demo": "remotion render src/index.ts Documentary out/demo.mp4",
     "typecheck": "tsc --noEmit",
-    "test": "npm run typecheck",
+    "test": "npm run typecheck && node --test src/*.test.mjs",
     "references:help": "node src/reference-videos.mjs help",
     "references:list": "node src/reference-videos.mjs list"
   },
