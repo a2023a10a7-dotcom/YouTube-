@@ -1,7 +1,7 @@
 import {readFile,writeFile} from "node:fs/promises";
-import {resolve} from "node:path";
+import {resolve,dirname} from "node:path";\nimport {mkdir} from "node:fs/promises";
 const PROMPT="Analyze only the supplied YouTube thumbnail images, not video contents. Return JSON with observations for thumbnailComposition, thumbnailColor, thumbnailTypography, thumbnailVisualMood. Each property: {summary,confidence,evidence,limitations}. Confidence 0..1. Cite thumbnail index. Do not infer cuts, shot length, transitions, camera motion, narration, music, sound effects, or full-video grading from thumbnails. State that thumbnail analysis is not full video style analysis.";
-export async function analyzeReferenceThumbnails({profile,apiKey,model="gpt-4.1-mini",fetchImpl=fetch}){
+export async function analyzeReferenceThumbnails({profile,apiKey,profilePath="data/channel-profile.json",model="gpt-4.1-mini",fetchImpl=fetch}){
  const refs=(profile.references??[]).filter(r=>r.metadata?.thumbnail_url);
  if(!refs.length)throw new Error("No available reference thumbnails in profile.");
  if(!apiKey)throw new Error("OPENAI_API_KEY missing for thumbnail analysis.");
@@ -17,7 +17,7 @@ export async function analyzeReferenceThumbnails({profile,apiKey,model="gpt-4.1-
  const lines=["# Reference thumbnail style analysis","","**Status:** Partial analysis based on thumbnail images only.",""];
  for(const [key,value] of Object.entries(result)){lines.push("## "+key,"",value.summary,"","Confidence: "+value.confidence,"","Evidence: "+value.evidence.join(", "),"","Limitations: "+value.limitations.join("; "),"");}
  lines.push("## Not analyzed from thumbnails","","",...style.unavailableEvidence.map(x=>"- "+x),"");
- await writeFile(resolve("data/REFERENCE-STYLE-PROFILE.md"),lines.join("\n"));
+ await writeFile(resolve(outputDir,"REFERENCE-STYLE-PROFILE.md"),lines.join("\n"));
  return style;
 }
 async function cli(){const path=process.argv[2]??"data/channel-profile.json";const profile=JSON.parse(await readFile(path,"utf8"));const style=await analyzeReferenceThumbnails({profile,apiKey:process.env.OPENAI_API_KEY,model:process.env.OPENAI_MODEL});console.log("Thumbnail-only analysis saved. Full-video analysis remains unavailable for "+style.unavailableEvidence.length+" categories.");}
