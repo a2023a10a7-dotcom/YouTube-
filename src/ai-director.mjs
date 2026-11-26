@@ -16,16 +16,16 @@ export function validateDirectorOutput(data){
  }
  return data;
 }
-export async function generateDirectorBlueprint({script,apiKey,model="gpt-4.1-mini",fetchImpl=fetch}){
+export async function generateDirectorBlueprint({script,referenceStyleProfile=null,apiKey,model="gpt-4.1-mini",fetchImpl=fetch}){
  if(!apiKey)throw new Error("OPENAI_API_KEY is missing.");
- const response=await fetchImpl("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{Authorization:`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model,temperature:.6,response_format:{type:"json_object"},messages:[{role:"system",content:SYSTEM},{role:"user",content:`Turn this documentary script into scenes. Keep the full script's facts, arrange visuals to match the narration.\n\n${script}`} ]})});
+ const response=await fetchImpl("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{Authorization:`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model,temperature:.6,response_format:{type:"json_object"},messages:[{role:"system",content:SYSTEM},{role:"user",content:`Turn this documentary script into scenes. Keep facts, arrange visuals to match narration. If partial thumbnail style observations are provided, use cautiously for typography, color, and composition; do not infer full-video pacing, transitions, motion or audio.\n\nSTYLE EVIDENCE: ${JSON.stringify(referenceStyleProfile)}\n\nSCRIPT:\n${script}`} ]})});
  if(!response.ok)throw new Error(`AI Director API error HTTP ${response.status}: ${await response.text()}`);
  const body=await response.json();const raw=body.choices?.[0]?.message?.content;
  if(!raw)throw new Error("AI Director response contained no JSON content.");
  return validateDirectorOutput(JSON.parse(raw));
 }
 export async function createProductionProject({script,openaiKey,pexelsKey,outputDir="public/project",model,fetchImpl=fetch}){
- const blueprint=await generateDirectorBlueprint({script,apiKey:openaiKey,model,fetchImpl});
+ let referenceStyleProfile=null;try{referenceStyleProfile=JSON.parse(await readFile("data/REFERENCE-STYLE-PROFILE.json","utf8"));}catch{}\n const blueprint=await generateDirectorBlueprint({script,referenceStyleProfile,apiKey:openaiKey,model,fetchImpl});
  const assetRecords=[];
  for(const scene of blueprint.scenes){
   const asset=await acquirePexelsClip({query:scene.visualQuery,apiKey:pexelsKey,outputDirectory:resolve("public/assets"),fetchImpl});
