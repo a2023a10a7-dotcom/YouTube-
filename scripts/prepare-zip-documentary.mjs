@@ -80,10 +80,15 @@ async function main(){
   if(picked){
    used.add(picked.clip_id);
    const ext=extname(picked.path)|| (picked.kind==="video"?".mp4":".jpg");
-   const filename=sceneId.toLowerCase()+"-"+basename(picked.path).replace(/[^a-zA-Z0-9._-]/g,"_");
+   let filename=sceneId.toLowerCase()+"-"+basename(picked.path).replace(/[^a-zA-Z0-9._-]/g,"_");
    mediaPath=resolve("public/assets/openmontage",filename);
    await copyFile(picked.path,mediaPath);
    mediaKind=picked.kind==="video"?"video":"image";
+   if(mediaKind==="video"&&ext.toLowerCase()!==".mp4"){
+    const converted=resolve("public/assets/openmontage",sceneId.toLowerCase()+"-clip.mp4");
+    await run("ffmpeg",["-y","-i",mediaPath,"-an","-vf","scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2","-c:v","libx264","-preset","veryfast","-crf","24","-pix_fmt","yuv420p",converted]);
+    mediaPath=converted;filename=basename(converted);
+   }
    assetRecord={assetId:picked.clip_id,localPath:mediaPath,publicPath:"/assets/openmontage/"+filename,source:"OpenMontage / "+picked.source,sourceUrl:picked.source_url,creator:picked.creator??null,licenseReference:picked.license,query,selectionScore:picked.score};
   }else{
    const filename=sceneId.toLowerCase()+".jpg";
