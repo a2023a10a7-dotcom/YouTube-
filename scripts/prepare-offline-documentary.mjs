@@ -25,7 +25,21 @@ async function getArchivePool(){
  return [...files.values()];
 }
 function score(query,item){const q=tokens(query),t=tokens([item.title,item.description].join(" "));let n=0;for(const x of q)if(t.has(x))n++;return n/Math.max(1,q.size);}
-async function downloadImage(item,path){const r=await fetch(item.url,{headers:{"User-Agent":"HiddenEngineDocumentary/1.0"}});if(!r.ok)throw new Error("Image download failed: "+r.status+" "+item.title);const b=Buffer.from(await r.arrayBuffer());if(b.length<10000)throw new Error("Image too small: "+item.title);await writeFile(path,b);}
+async function downloadImage(item,path){
+ const urls=[item.url,item.originalUrl].filter(Boolean);
+ let lastError;
+ for(const url of urls){
+  for(let attempt=0;attempt<6;attempt++){
+   try{
+    const r=await fetch(url,{headers:{"User-Agent":"HiddenEngineDocumentary/1.0 (https://github.com/a2023a10a7-dotcom/YouTube-)","Accept":"image/avif,image/webp,image/apng,image/*,*/*;q=0.8"}});
+    if(r.status===429||r.status===503){const retry=Number(r.headers.get("retry-after")??0);await new Promise(resolve=>setTimeout(resolve,Math.max(retry*1000,1500*Math.pow(2,attempt))));continue;}
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    const b=Buffer.from(await r.arrayBuffer());if(b.length<10000)throw new Error("Image too small");await writeFile(path,b);return;
+   }catch(error){lastError=error;await new Promise(resolve=>setTimeout(resolve,1000*Math.pow(2,attempt)));}
+  }
+ }
+ throw new Error("Image download failed after retries: "+item.title+" — "+(lastError?.message??"rate limited"));
+}
 function run(command,args,stdin){return new Promise((ok,bad)=>{const p=spawn(command,args,{stdio:["pipe","inherit","inherit"]});p.on("error",bad);p.on("close",c=>c===0?ok():bad(new Error(command+" exited "+c)));if(stdin!==undefined){p.stdin.end(stdin);}else p.stdin.end();});}
 async function probeDuration(path){return new Promise((ok,bad)=>{const p=spawn("ffprobe",["-v","error","-show_entries","format=duration","-of","default=noprint_wrappers=1:nokey=1",path]);let s="";p.stdout.on("data",d=>s+=d);p.on("error",bad);p.on("close",c=>c===0?ok(Number(s.trim())):bad(new Error("ffprobe failed for "+path)));});}
 function captionsFor(text,duration){const sentences=text.match(/[^.!?]+[.!?]+|[^.!?]+$/g)??[text];const weights=sentences.map(s=>Math.max(1,tokens(s).size));const total=weights.reduce((a,b)=>a+b,0);let cursor=0;return sentences.map((s,i)=>{const start=cursor;cursor+=duration*weights[i]/total;return {startSeconds:Number(start.toFixed(2)),endSeconds:Number(cursor.toFixed(2)),text:s.trim()};});}
@@ -46,6 +60,7 @@ async function main(){
   const ext=/\.png/i.test(picked.item.title)?".png":".jpg";
   const filename="scene-"+String(i+1).padStart(2,"0")+ext;
   const imagePath=resolve("public/assets/archive",filename);
+  if(i>0)await new Promise(resolve=>setTimeout(resolve,1800));
   await downloadImage(picked.item,imagePath);
   const audioPath=resolve("public/assets/narration","scene-"+String(i+1).padStart(2,"0")+".wav");
   await run("piper",["--model",voice,"--output_file",audioPath],text);
