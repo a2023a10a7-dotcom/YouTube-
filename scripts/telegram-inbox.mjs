@@ -55,7 +55,7 @@ for(const update of updates){
  const urls=[...brief.matchAll(/https?:\/\/[^\s]+/g)].map(m=>m[0].replace(/[),.;]+$/,""));
  const cleanBrief=brief.replace(/https?:\/\/[^\s]+/g," ").replace(/\s+/g," ").trim()||"Create a documentary based on the supplied reference videos.";
  if(cleanBrief.length>60000)throw new Error("Incoming production brief exceeds GitHub Actions input limit.");
- await github("actions/workflows/render-demo.yml/dispatches",{ref:targetRef,inputs:{production_script:cleanBrief,reference_urls:urls.join("\n")}});
+ await github("actions/workflows/render-demo.yml/dispatches",{ref:targetRef,inputs:{production_script:cleanBrief,reference_urls:urls.join("\n"),telegram_chat_id:String(chatId)}});
  await telegram("sendMessage",{chat_id:chatId,text:"استلمت موجز الإنتاج وروابط المراجع، وأرسلت طلب التشغيل إلى GitHub Actions. تنبيه: مرحلة البحث والتوليد تعتمد على رصيد OpenAI API المتاح؛ إذا لم يتوفر الرصيد سيظهر فشل واضح ولن يُعلن عن فيديو غير موجود."});
 }
 if(nextOffset>offset){
