@@ -116,7 +116,7 @@ export default {
       return json({ ok: true, service: "michkatt-telegram-webhook", framework: "grammY" });
     }
 
-    if (request.method === "POST" && url.pathname === `/setup/${env.SETUP_SECRET || "disabled"}`) {
+    if ((request.method === "GET" || request.method === "POST") && url.pathname === `/setup/${env.SETUP_SECRET || "disabled"}`) {
       if (!env.SETUP_SECRET || !env.WORKER_URL || !env.TELEGRAM_WEBHOOK_SECRET) {
         return json({ ok: false, error: "Webhook setup secrets are incomplete." }, 503);
       }
