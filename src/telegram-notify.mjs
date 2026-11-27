@@ -1,5 +1,6 @@
 import {readFile,stat} from "node:fs/promises";
 
+// Offline documentary deliveries include the rendered MP4 after QA passes.
 const API="https://api.telegram.org";
 async function telegram(method,token,body){
  const response=await fetch(`${API}/bot${token}/${method}`,{method:"POST",body});
