@@ -60,6 +60,20 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4.1-mini' }}
         run: node src/reference-video-analysis.mjs
+      - name: Resolve Telegram chat from the bot's incoming message
+        if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' && (inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood'))) }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          set -euo pipefail
+          updates=$(curl -fsS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates")
+          chat_id=$(printf '%s' "$updates" | jq -r '[.result[]? | select(.message.chat.type == "private") | .message.chat.id] | last // empty')
+          if [ -z "$chat_id" ]; then
+            echo "::error::No private chat found. Open https://t.me/Michkatt_bot and send /start or any message, then rerun production."
+            exit 1
+          fi
+          echo "TELEGRAM_CHAT_ID=$chat_id" >> "$GITHUB_ENV"
+          echo "Telegram private chat detected; chat ID stored for this workflow only."
       - name: Generate AI-directed scenes, stock footage, and voice narration
         if: ${{ inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood')) }}
         env:
@@ -70,7 +84,7 @@ jobs:
           OPENAI_RESEARCH_MODEL: ${{ secrets.OPENAI_RESEARCH_MODEL || 'gpt-4.1-mini' }}
           TTS_VOICE: ${{ secrets.TTS_VOICE || 'alloy' }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_CHAT_ID: ${{ env.TELEGRAM_CHAT_ID }}
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
             echo "::error::Production mode requires OPENAI_API_KEY in repository Actions secrets."
