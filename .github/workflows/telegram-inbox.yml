@@ -1,0 +1,41 @@
+name: Telegram inbox bridge
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: telegram-inbox-bridge
+  cancel-in-progress: false
+jobs:
+  receive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Receive Telegram messages and dispatch production
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PRODUCTION_BRANCH: integrate/openmontage
+        run: node scripts/telegram-inbox.mjs
+      - name: Persist Telegram update offset
+        run: |
+          if git diff --quiet -- data/telegram-update-offset.txt; then
+            echo "No new Telegram updates to checkpoint."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/telegram-update-offset.txt
+            git commit -m "Persist Telegram inbox offset"
+            git push
+          fi
