@@ -69,6 +69,8 @@ jobs:
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4.1-mini' }}
           OPENAI_RESEARCH_MODEL: ${{ secrets.OPENAI_RESEARCH_MODEL || 'gpt-4.1-mini' }}
           TTS_VOICE: ${{ secrets.TTS_VOICE || 'alloy' }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
             echo "::error::Production mode requires OPENAI_API_KEY in repository Actions secrets."
@@ -81,6 +83,11 @@ jobs:
           fi
           echo "Using research model: ${OPENAI_RESEARCH_MODEL}; production model: ${OPENAI_MODEL}"
           node src/production-agent.mjs production-topic.txt
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
+            node src/telegram-notify.mjs
+          else
+            echo "::warning::Telegram delivery skipped. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID repository secrets."
+          fi
           npm run render:project
       - name: Verify production render and project asset provenance
         if: ${{ inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood')) }}
