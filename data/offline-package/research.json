@@ -1,0 +1,45 @@
+{
+  "topic": "The Great Molasses Flood of 1919",
+  "createdAt": "2026-11-27",
+  "status": "editorially_prepared_offline_research",
+  "note": "This is a source-grounded editorial research package prepared without a paid language-model API call. Claims are limited to the sources listed; disputed measurements are identified rather than presented as certain.",
+  "report": "On January 15, 1919, a large storage tank holding industrial molasses ruptured on Commercial Street in Boston's North End. Boston's official historical account identifies the tank as about 50 feet tall and says it released approximately 2.3 million gallons. The Massachusetts state historical account records 21 deaths and 150 injuries.\n\nThe tank had been built in 1915 for Purity Distilling Company. Boston's account says residents had noticed leaks and that later engineering findings identified walls too thin for the stored load and steel vulnerable to cracking. The disaster should therefore be framed as an industrial safety and engineering failure, not as a freak event caused simply by an unusual liquid.\n\nAt about 1 p.m., the released molasses surged through the neighborhood. Boston's account describes damage to buildings and the elevated railway, and the displacement of a firehouse. Contemporary and later accounts give differing estimates for wave height, speed, and even the tank's capacity; this package uses Boston's municipal figure of 2.3 million gallons and avoids treating disputed wave measurements as settled facts.\n\nRescuers included police, Red Cross personnel, and naval cadets from the USS Nantucket. The final toll reached 21 dead and 150 injured. Cleanup took weeks; state historical material describes seawater pumping and removal of hardened molasses and debris.\n\nThe aftermath became a major legal and engineering inquiry. The Massachusetts state historical account describes 119 claims consolidated into litigation and a finding that the tank's construction was faulty. The strongest responsible narrative is about warning signs, weak construction, accountability, and the human cost of preventable industrial risk.",
+  "keyFacts": [
+    {
+      "claim": "The rupture occurred on January 15, 1919, on Commercial Street in Boston's North End.",
+      "source": "Boston.gov",
+      "url": "https://www.boston.gov/news/100-years-ago-today-molasses-crashes-through-bostons-north-end"
+    },
+    {
+      "claim": "Boston's official account gives approximately 2.3 million gallons and a tank height of about 50 feet.",
+      "source": "Boston.gov",
+      "url": "https://www.boston.gov/news/100-years-ago-today-molasses-crashes-through-bostons-north-end"
+    },
+    {
+      "claim": "The final toll was 21 dead and 150 injured.",
+      "source": "Massachusetts Secretary of the Commonwealth",
+      "url": "https://www.sec.state.ma.us/divisions/state-house-tours/did-you-know/Molasses-Flood.htm"
+    },
+    {
+      "claim": "The state historical account describes 119 claims and the inquiry into faulty tank construction.",
+      "source": "Massachusetts Secretary of the Commonwealth",
+      "url": "https://www.sec.state.ma.us/divisions/state-house-tours/did-you-know/Molasses-Flood.htm"
+    },
+    {
+      "claim": "A later scientific explanation discusses flawed steel, safety oversights, temperature changes and fluid dynamics.",
+      "source": "HISTORY",
+      "url": "https://www.history.com/articles/great-molasses-flood-science"
+    },
+    {
+      "claim": "WBUR's centennial reporting documents local recollections of leaks and groaning from the tank.",
+      "source": "WBUR",
+      "url": "https://www.wbur.org/news/2019/01/15/boston-molasses-flood-100-years-later"
+    }
+  ],
+  "caveats": [
+    "Some sources quote 2.5 million gallons; this package uses the City of Boston's 2.3 million-gallon figure.",
+    "Wave height and speed estimates vary across sources. Avoid a definitive numerical claim in narration.",
+    "The exact immediate fracture sequence should not be dramatized as known fact.",
+    "Do not use modern stock footage as if it were authentic 1919 archival footage."
+  ]
+}
