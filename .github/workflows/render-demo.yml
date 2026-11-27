@@ -6,6 +6,10 @@ on:
         description: "Paste 3 or 5 YouTube reference links, one per line (optional)"
         required: false
         type: string
+      telegram_chat_id:
+        description: "Private Telegram chat ID supplied by the inbox bridge."
+        required: false
+        type: string
       production_script:
         description: "Documentary topic. Production mode researches, scripts, selects clips, narrates and renders. Requires OPENAI_API_KEY and PEXELS_API_KEY secrets."
         required: false
