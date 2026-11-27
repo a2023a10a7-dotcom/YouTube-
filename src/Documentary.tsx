@@ -2,7 +2,8 @@ import React from "react";
 import {AbsoluteFill, Audio, Img, Sequence, Video, interpolate, useCurrentFrame, useVideoConfig, staticFile} from "remotion";
 import {demoBlueprint, SceneBlueprint, Soundtrack} from "./blueprint";
 
-const secondsToFrames=(seconds:number,fps:number)=>Math.round(seconds*fps);\nconst projectAsset=(src:string)=>staticFile(src.startsWith("/")?src.slice(1):src);
+const secondsToFrames=(seconds:number,fps:number)=>Math.round(seconds*fps);
+const projectAsset=(src:string)=>staticFile(src.startsWith("/")?src.slice(1):src);
 
 const SceneView:React.FC<{scene:SceneBlueprint;index:number;start:number}> = ({scene,index,start})=>{
  const frame=useCurrentFrame(); const {fps,durationInFrames}=useVideoConfig();
