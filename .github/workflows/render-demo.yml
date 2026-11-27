@@ -162,6 +162,25 @@ jobs:
       - name: Render the technical demo when no script was supplied
         if: ${{ inputs.production_script == '' && !inputs.offline_production && !(github.event_name == 'push' && (contains(github.event.head_commit.message, 'Great Molasses Flood') || contains(github.event.head_commit.message, 'Enable offline documentary'))) }}
         run: npm run render:demo
+      - name: Send technical demo video to Telegram
+        if: ${{ success() && inputs.production_script == '' && !inputs.offline_production && !(github.event_name == 'push' && (contains(github.event.head_commit.message, 'Great Molasses Flood') || contains(github.event.head_commit.message, 'Enable offline documentary'))) && env.TELEGRAM_CHAT_ID != '' }}
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ env.TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          test -s out/demo.mp4
+          size=$(stat -c%s out/demo.mp4)
+          if [ "$size" -gt 49000000 ]; then echo "::warning::Demo exceeds Telegram's 49 MB bot upload limit."; exit 1; fi
+          response=$(curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" -F "chat_id=${TELEGRAM_CHAT_ID}" -F "document=@out/demo.mp4;type=video/mp4" -F "caption=🎬 الفيديو التجريبي التقني لمحرك المونتاج (Remotion). هذا اختبار تقني وليس الوثائقي النهائي.")
+          ok=$(printf '%s' "$response" | jq -r '.ok // false')
+          if [ "$ok" != "true" ]; then
+            description=$(printf '%s' "$response" | jq -r '.description // "Unknown Telegram API error"')
+            echo "::error::Telegram rejected demo video: $description"
+            exit 1
+          fi
+          echo "Telegram accepted demo video document: $(printf '%s' "$response" | jq -r '.result.document.file_name // "video"')"
       - name: Upload reference profile
         if: hashFiles('data/channel-profile.json') != ''
         uses: actions/upload-artifact@v4
