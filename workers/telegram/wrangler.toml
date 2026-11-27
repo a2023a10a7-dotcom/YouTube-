@@ -1,0 +1,10 @@
+name = "michkatt-telegram-webhook"
+main = "src/index.js"
+compatibility_date = "2026-11-27"
+workers_dev = true
+
+[vars]
+GITHUB_REPOSITORY = "a2023a10a7-dotcom/YouTube-"
+PRODUCTION_BRANCH = "integrate/openmontage"
+# Set WORKER_URL after the first deployment, for example:
+# WORKER_URL = "https://michkatt-telegram-webhook.YOUR-SUBDOMAIN.workers.dev"
