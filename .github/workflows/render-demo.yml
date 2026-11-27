@@ -7,9 +7,14 @@ on:
         required: false
         type: string
       production_script:
-        description: "Documentary topic. Production uses OpenMontage multi-source footage retrieval, AI selection, narration and Remotion rendering. Requires OPENAI_API_KEY."
+        description: "Documentary topic. Paid AI production path; requires API credits."
         required: false
         type: string
+      offline_production:
+        description: "Build the Great Molasses Flood documentary using licensed Wikimedia archival images, free Piper TTS and Remotion (no paid API)."
+        required: false
+        type: boolean
+        default: false
   push:
     paths:
       - "data/production-topic.txt"
@@ -30,12 +35,13 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install OpenMontage reference-analysis dependencies
-        if: ${{ inputs.reference_urls != '' || inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood')) }}
+        if: ${{ inputs.reference_urls != '' || inputs.production_script != '' || inputs.offline_production || (github.event_name == 'push' && (contains(github.event.head_commit.message, 'Great Molasses Flood') || contains(github.event.head_commit.message, 'Enable offline documentary'))) }}
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
           python -m pip install --upgrade pip
           python -m pip install -r vendor/OpenMontage/requirements.txt yt-dlp youtube-transcript-api "scenedetect[opencv]"
+          if [ "${{ inputs.offline_production || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary')) }}" = "true" ]; then python -m pip install piper-tts; fi
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -43,6 +49,23 @@ jobs:
       - run: npm test
       - name: Syntax-check OpenMontage Python adapters
         run: python -m py_compile scripts/openmontage_reference_analyzer.py scripts/openmontage_asset_search.py
+      - name: Download free Piper English voice model
+        if: ${{ inputs.offline_production || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary')) }}
+        run: |
+          mkdir -p voices
+          curl -fL --retry 3 "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx" -o voices/en_US-lessac-medium.onnx
+          curl -fL --retry 3 "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json" -o voices/en_US-lessac-medium.onnx.json
+          test -s voices/en_US-lessac-medium.onnx
+          test -s voices/en_US-lessac-medium.onnx.json
+      - name: Prepare offline documentary with licensed archival images and local narration
+        if: ${{ inputs.offline_production || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary')) }}
+        run: node scripts/prepare-offline-documentary.mjs
+      - name: Render offline documentary
+        if: ${{ success() && (inputs.offline_production || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary'))) }}
+        run: npx remotion render src/index.ts Documentary out/documentary.mp4 --props=public/project/props.json --codec=h264 --crf=22 --pixel-format=yuv420p --concurrency=2
+      - name: Verify offline documentary video, audio, duration and asset provenance
+        if: ${{ success() && (inputs.offline_production || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary'))) }}
+        run: npm run qa:render
       - name: Save supplied YouTube reference links
         if: ${{ inputs.reference_urls != '' }}
         env:
@@ -98,7 +121,7 @@ jobs:
           fi
           echo "Telegram test message accepted by Telegram API."
       - name: Generate AI-directed scenes, stock footage, and voice narration
-        if: ${{ inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood')) }}
+        if: ${{ !inputs.offline_production && !(github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary')) && (inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood'))) }}
         env:
           SCRIPT_TEXT: ${{ inputs.production_script }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -120,17 +143,17 @@ jobs:
           node src/production-agent.mjs production-topic.txt
           npm run render:project
       - name: Verify production render and project asset provenance
-        if: ${{ inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood')) }}
+        if: ${{ !inputs.offline_production && !(github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary')) && (inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood'))) }}
         run: npm run qa:render
       - name: Deliver research, script and director blueprint to Telegram
-        if: ${{ success() && (inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood'))) && env.TELEGRAM_CHAT_ID != '' }}
+        if: ${{ success() && (inputs.production_script != '' || inputs.offline_production || (github.event_name == 'push' && (contains(github.event.head_commit.message, 'Great Molasses Flood') || contains(github.event.head_commit.message, 'Enable offline documentary')))) && env.TELEGRAM_CHAT_ID != '' }}
         continue-on-error: true
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ env.TELEGRAM_CHAT_ID }}
         run: node src/telegram-notify.mjs
       - name: Render the technical demo when no script was supplied
-        if: ${{ inputs.production_script == '' && !(github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood')) }}
+        if: ${{ inputs.production_script == '' && !inputs.offline_production && !(github.event_name == 'push' && (contains(github.event.head_commit.message, 'Great Molasses Flood') || contains(github.event.head_commit.message, 'Enable offline documentary'))) }}
         run: npm run render:demo
       - name: Upload reference profile
         if: hashFiles('data/channel-profile.json') != ''
@@ -141,11 +164,11 @@ jobs:
       - name: Upload generated documentary
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ (inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood'))) && 'generated-documentary' || 'documentary-demo-mp4' }}
-          path: ${{ (inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood'))) && 'out/documentary.mp4' || 'out/demo.mp4' }}
+          name: ${{ (inputs.production_script != '' || inputs.offline_production || (github.event_name == 'push' && (contains(github.event.head_commit.message, 'Great Molasses Flood') || contains(github.event.head_commit.message, 'Enable offline documentary')))) && 'generated-documentary' || 'documentary-demo-mp4' }}
+          path: ${{ (inputs.production_script != '' || inputs.offline_production || (github.event_name == 'push' && (contains(github.event.head_commit.message, 'Great Molasses Flood') || contains(github.event.head_commit.message, 'Enable offline documentary')))) && 'out/documentary.mp4' || 'out/demo.mp4' }}
           if-no-files-found: error
       - name: Upload project files and asset provenance
-        if: ${{ inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood')) }}
+        if: ${{ !inputs.offline_production && !(github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary')) && (inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood'))) }}
         uses: actions/upload-artifact@v4
         with:
           name: documentary-project-source
