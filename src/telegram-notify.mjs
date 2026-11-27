@@ -1,6 +1,6 @@
 import {readFile,stat} from "node:fs/promises";
 
-// Offline documentary deliveries include the rendered MP4 after QA passes. This workflow path uses local Piper and Remotion.
+// Offline documentary deliveries include the rendered MP4 after QA passes. This workflow path uses local Piper, Remotion, and resilient archival downloads.
 const API="https://api.telegram.org";
 async function telegram(method,token,body){
  const response=await fetch(`${API}/bot${token}/${method}`,{method:"POST",body});
