@@ -2,27 +2,119 @@ name: Documentary production pipeline
 on:
   workflow_dispatch:
     inputs:
-      reference_urls:
-        description: "Paste 3 or 5 YouTube reference links, one per line (optional)"
+      telegram_zip_file_id:
+        description: "Telegram file_id for a user-supplied ZIP package."
+        required: false
+        type: string
+      telegram_zip_name:
+        description: "Original ZIP filename."
         required: false
         type: string
       telegram_chat_id:
         description: "Private Telegram chat ID supplied by the inbox bridge."
         required: false
         type: string
+      reference_urls:
+        description: "Paste YouTube reference links, one per line (optional)."
+        required: false
+        type: string
       production_script:
-        description: "Documentary topic. Production mode researches, scripts, selects clips, narrates and renders. Requires OPENAI_API_KEY and PEXELS_API_KEY secrets."
+        description: "Documentary topic for the AI production route."
         required: false
         type: string
   push:
     paths:
       - "src/**"
+      - "workers/telegram/src/**"
       - "package.json"
       - "package-lock.json"
       - "remotion.config.ts"
       - ".github/workflows/render-demo.yml"
 jobs:
+  unpack-zip:
+    if: ${{ inputs.telegram_zip_file_id != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download ZIP from Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_FILE_ID: ${{ inputs.telegram_zip_file_id }}
+          TELEGRAM_ZIP_NAME: ${{ inputs.telegram_zip_name }}
+        run: |
+          set -euo pipefail
+          test -n "$TELEGRAM_BOT_TOKEN" || { echo "::error::Missing TELEGRAM_BOT_TOKEN repository secret"; exit 1; }
+          FILE_PATH=$(curl -fsS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${TELEGRAM_FILE_ID}" | python -c 'import json,sys; print(json.load(sys.stdin)["result"]["file_path"])')
+          mkdir -p incoming extracted
+          curl -fLsS "https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${FILE_PATH}" -o incoming/package.zip
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import os, re
+          archive = Path("incoming/package.zip")
+          if archive.stat().st_size > 20 * 1024 * 1024:
+              raise SystemExit("ZIP exceeds 20 MiB.")
+          required = {
+              "project_brief.md", "research_analysis.md", "documentary_screenplay.md",
+              "director_blueprint.md", "director_blueprint.json", "asset_manifest.json"
+          }
+          out = Path("extracted").resolve()
+          with ZipFile(archive) as z:
+              infos = z.infolist()
+              if len(infos) > 300:
+                  raise SystemExit("ZIP contains too many entries (limit 300).")
+              total = 0
+              found = {}
+              for info in infos:
+                  name = info.filename.replace("\\", "/")
+                  if name.startswith("/") or ".." in Path(name).parts or info.is_dir():
+                      if info.is_dir(): continue
+                      raise SystemExit(f"Unsafe ZIP path rejected: {name}")
+                  if (info.external_attr >> 16) & 0o170000 == 0o120000:
+                      raise SystemExit(f"ZIP symlink rejected: {name}")
+                  total += info.file_size
+                  if total > 100 * 1024 * 1024:
+                      raise SystemExit("Expanded ZIP exceeds 100 MiB.")
+                  base = Path(name).name
+                  if base in required:
+                      found[base] = info
+              missing = sorted(required - found.keys())
+              if missing:
+                  raise SystemExit("ZIP missing required files: " + ", ".join(missing))
+              for name, info in found.items():
+                  target = out / name
+                  with z.open(info) as src, target.open("wb") as dst:
+                      while chunk := src.read(1024 * 1024):
+                          dst.write(chunk)
+          import json
+          for filename in ("director_blueprint.json", "asset_manifest.json"):
+              with (out / filename).open(encoding="utf-8") as f:
+                  json.load(f)
+          print("ZIP_VALIDATION_OK")
+          print("Extracted: " + ", ".join(sorted(required)))
+          PY
+      - name: Upload extracted documentary package
+        uses: actions/upload-artifact@v4
+        with:
+          name: michkatt-unpacked-documentary-package
+          path: extracted/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Notify Telegram
+        if: ${{ always() && inputs.telegram_chat_id != '' }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ inputs.telegram_chat_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          if [ "$JOB_STATUS" = "success" ]; then
+            MESSAGE="تم فك ضغط ZIP بنجاح والتحقق من الملفات الستة، بما فيها director_blueprint.json وasset_manifest.json. حُفظت الملفات كـ Artifact باسم michkatt-unpacked-documentary-package. لم يتم استدعاء OpenAI."
+          else
+            MESSAGE="فشل فك ضغط ZIP أو التحقق منه. افتح سجل GitHub Actions لمعرفة الملف أو السبب."
+          fi
+          curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d "chat_id=${CHAT_ID}" --data-urlencode "text=${MESSAGE}"
   render:
+    if: ${{ inputs.telegram_zip_file_id == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -41,14 +133,8 @@ jobs:
             import { saveReferenceProfile } from "./src/reference-videos.mjs";
             const urls = (process.env.YOUTUBE_REFERENCE_URLS || "").split(/\s+/).filter(Boolean);
             const profile = await saveReferenceProfile(urls);
-            console.log(`Saved ${profile.referenceCount} reference URLs. Visual style is not yet analyzed.`);
+            console.log(`Saved ${profile.referenceCount} reference URLs.`);
           '
-      - name: Analyze reference thumbnails with AI (limited evidence)
-        if: ${{ inputs.reference_urls != '' }}
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
-        run: node src/reference-style-analysis.mjs data/channel-profile.json
       - name: Generate AI-directed scenes, stock footage, and voice narration
         if: ${{ inputs.production_script != '' }}
         env:
@@ -59,35 +145,18 @@ jobs:
           TTS_VOICE: ${{ secrets.TTS_VOICE }}
         run: |
           if [ -z "$OPENAI_API_KEY" ] || [ -z "$PEXELS_API_KEY" ]; then
-            echo "::error::Production mode requires OPENAI_API_KEY and PEXELS_API_KEY in repository Actions secrets."
+            echo "::error::This text-only production route requires OPENAI_API_KEY and PEXELS_API_KEY."
             exit 1
           fi
           node --input-type=module -e 'import {writeFile} from "node:fs/promises"; await writeFile("production-topic.txt", process.env.SCRIPT_TEXT);'
           node src/production-agent.mjs production-topic.txt
           npm run render:project
-      - name: Verify production render and project asset provenance
-        if: ${{ inputs.production_script != '' }}
-        run: npm run qa:render
-      - name: Render the technical demo when no script was supplied
+      - name: Render technical demo when no script was supplied
         if: ${{ inputs.production_script == '' }}
         run: npm run render:demo
-      - name: Upload reference profile
-        if: hashFiles('data/channel-profile.json') != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: channel-reference-profile
-          path: data/
       - name: Upload generated documentary
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.production_script != '' && 'generated-documentary' || 'documentary-demo-mp4' }}
           path: ${{ inputs.production_script != '' && 'out/documentary.mp4' || 'out/demo.mp4' }}
           if-no-files-found: error
-      - name: Upload project files and asset provenance
-        if: ${{ inputs.production_script != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: documentary-project-source
-          path: |
-            public/project/
-            public/assets/
