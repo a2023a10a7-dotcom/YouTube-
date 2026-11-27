@@ -61,7 +61,7 @@ jobs:
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4.1-mini' }}
         run: node src/reference-video-analysis.mjs
       - name: Resolve Telegram chat from the bot's incoming message
-        if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' && (inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood'))) }}
+        if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' }}
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
@@ -74,6 +74,9 @@ jobs:
           fi
           echo "TELEGRAM_CHAT_ID=$chat_id" >> "$GITHUB_ENV"
           echo "Telegram private chat detected; chat ID stored for this workflow only."
+          curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \\
+            --data-urlencode "chat_id=$chat_id" \\
+            --data-urlencode "text=✅ Telegram connection test successful. Your documentary research, English script, and AI Director blueprint will be delivered here when production runs."
       - name: Generate AI-directed scenes, stock footage, and voice narration
         if: ${{ inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood')) }}
         env:
