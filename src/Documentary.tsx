@@ -3,7 +3,8 @@ import {AbsoluteFill, Audio, Img, Sequence, Video, interpolate, staticFile, useC
 import {demoBlueprint, SceneBlueprint, Soundtrack} from "./blueprint";
 
 const secondsToFrames=(seconds:number,fps:number)=>Math.round(seconds*fps);
-// Resolve assets from Remotion public/ so GitHub Actions renders the generated offline project reliably.\nconst projectAsset=(src:string)=>staticFile(src.replace(/^\\/+/, ""));
+// Resolve assets from Remotion public/ so GitHub Actions renders the generated offline project reliably.
+const projectAsset=(src:string)=>staticFile(src.startsWith("/") ? src.slice(1) : src);
 
 const SceneView:React.FC<{scene:SceneBlueprint;index:number;start:number}> = ({scene,index,start})=>{
  const frame=useCurrentFrame(); const {fps,durationInFrames}=useVideoConfig();
