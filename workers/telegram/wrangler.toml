@@ -5,6 +5,5 @@ workers_dev = true
 
 [vars]
 GITHUB_REPOSITORY = "a2023a10a7-dotcom/YouTube-"
-PRODUCTION_BRANCH = "integrate/openmontage"
-# Set WORKER_URL after the first deployment, for example:
-# WORKER_URL = "https://michkatt-telegram-webhook.YOUR-SUBDOMAIN.workers.dev"
+PRODUCTION_BRANCH = "main"
+# Set WORKER_URL after deployment to the exact workers.dev URL.
