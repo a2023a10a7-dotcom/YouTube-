@@ -1,9 +1,10 @@
 name: Documentary production pipeline
+
 on:
   workflow_dispatch:
     inputs:
       telegram_zip_file_id:
-        description: "Telegram file_id for a user-supplied ZIP package."
+        description: "Telegram file_id for the documentary ZIP package."
         required: false
         type: string
       telegram_zip_name:
@@ -14,43 +15,107 @@ on:
         description: "Private Telegram chat ID supplied by the inbox bridge."
         required: false
         type: string
-      reference_urls:
-        description: "Paste YouTube reference links, one per line (optional)."
+      production_script:
+        description: "Legacy topic input (not used by the ZIP production route)."
         required: false
         type: string
-      production_script:
-        description: "Documentary topic for the AI production route."
+      reference_urls:
+        description: "Optional reference URLs (not used by the ZIP production route)."
         required: false
         type: string
   push:
     paths:
+      - "scripts/**"
       - "src/**"
       - "workers/telegram/src/**"
       - "package.json"
       - "package-lock.json"
       - "remotion.config.ts"
+      - ".gitmodules"
       - ".github/workflows/render-demo.yml"
+
+permissions:
+  contents: read
+  actions: read
+
 jobs:
-  unpack-zip:
-    if: ${{ inputs.telegram_zip_file_id != '' }}
+  render-zip:
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.telegram_zip_file_id != '') || github.event_name == 'push' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 90
+    env:
+      TELEGRAM_CHAT_ID: ${{ inputs.telegram_chat_id || (github.event_name == 'push' && '8253589285') || '' }}
     steps:
+      - name: Checkout repository and OpenMontage
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
+
+      - name: Install open-source production dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install piper-tts requests pyyaml pydantic jsonschema python-dotenv pillow numpy certifi yt-dlp
+          python -m py_compile scripts/openmontage_asset_search.py
+
+      - name: Install Node dependencies and run tests
+        run: |
+          npm install
+          npm test
+
+      - name: Download local English Piper voice
+        run: |
+          mkdir -p voices incoming extracted
+          curl -fL --retry 5 --retry-delay 2 "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx" -o voices/en_US-lessac-medium.onnx
+          curl -fL --retry 5 --retry-delay 2 "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json" -o voices/en_US-lessac-medium.onnx.json
+          test -s voices/en_US-lessac-medium.onnx
+          test -s voices/en_US-lessac-medium.onnx.json
+          piper --help >/dev/null
+
       - name: Download ZIP from Telegram
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_FILE_ID: ${{ inputs.telegram_zip_file_id }}
-          TELEGRAM_ZIP_NAME: ${{ inputs.telegram_zip_name }}
         run: |
           set -euo pipefail
-          test -n "$TELEGRAM_BOT_TOKEN" || { echo "::error::Missing TELEGRAM_BOT_TOKEN repository secret"; exit 1; }
+          test -n "$TELEGRAM_BOT_TOKEN"
+          test -n "$TELEGRAM_FILE_ID"
           FILE_PATH=$(curl -fsS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${TELEGRAM_FILE_ID}" | python -c 'import json,sys; print(json.load(sys.stdin)["result"]["file_path"])')
-          mkdir -p incoming extracted
           curl -fLsS "https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${FILE_PATH}" -o incoming/package.zip
+          test -s incoming/package.zip
+
+      - name: Download the already validated ZIP artifact for the first end-to-end run
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl -fLsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/15232315987/zip" -o incoming/package.zip
+          test -s incoming/package.zip
+
+      - name: Safely extract and validate the documentary package
+        run: |
           python - <<'PY'
           from pathlib import Path
           from zipfile import ZipFile
-          import os, re
+          import json
           archive = Path("incoming/package.zip")
           if archive.stat().st_size > 20 * 1024 * 1024:
               raise SystemExit("ZIP exceeds 20 MiB.")
@@ -63,100 +128,102 @@ jobs:
               infos = z.infolist()
               if len(infos) > 300:
                   raise SystemExit("ZIP contains too many entries (limit 300).")
-              total = 0
               found = {}
+              total = 0
               for info in infos:
                   name = info.filename.replace("\\", "/")
-                  if name.startswith("/") or ".." in Path(name).parts or info.is_dir():
-                      if info.is_dir(): continue
-                      raise SystemExit(f"Unsafe ZIP path rejected: {name}")
+                  if name.startswith("/") or ".." in Path(name).parts:
+                      if info.is_dir():
+                          continue
+                      raise SystemExit("Unsafe ZIP path rejected: " + name)
                   if (info.external_attr >> 16) & 0o170000 == 0o120000:
-                      raise SystemExit(f"ZIP symlink rejected: {name}")
+                      raise SystemExit("ZIP symlink rejected: " + name)
                   total += info.file_size
                   if total > 100 * 1024 * 1024:
                       raise SystemExit("Expanded ZIP exceeds 100 MiB.")
-                  base = Path(name).name
-                  if base in required:
-                      found[base] = info
+                  if Path(name).name in required:
+                      found[Path(name).name] = info
               missing = sorted(required - found.keys())
               if missing:
                   raise SystemExit("ZIP missing required files: " + ", ".join(missing))
               for name, info in found.items():
-                  target = out / name
-                  with z.open(info) as src, target.open("wb") as dst:
+                  with z.open(info) as src, (out / name).open("wb") as dst:
                       while chunk := src.read(1024 * 1024):
                           dst.write(chunk)
-          import json
-          for filename in ("director_blueprint.json", "asset_manifest.json"):
-              with (out / filename).open(encoding="utf-8") as f:
+          for name in ("director_blueprint.json", "asset_manifest.json"):
+              with (out / name).open(encoding="utf-8") as f:
                   json.load(f)
           print("ZIP_VALIDATION_OK")
           print("Extracted: " + ", ".join(sorted(required)))
           PY
-      - name: Upload extracted documentary package
+
+      - name: Build scene assets, narration, music and Remotion props
+        run: node scripts/prepare-zip-documentary.mjs
+
+      - name: Render the actual documentary with Remotion
+        run: |
+          npx remotion render src/index.ts Documentary out/documentary.mp4 --props=public/project/props.json --codec=h264 --crf=22 --pixel-format=yuv420p --concurrency=2
+
+      - name: Verify the rendered documentary and all project assets
+        run: npm run qa:render
+
+      - name: Create Telegram-compatible 1080p delivery copy
+        run: |
+          set -euo pipefail
+          ffmpeg -y -i out/documentary.mp4 -c:v libx264 -preset medium -b:v 1700k -maxrate 1700k -bufsize 3400k -pix_fmt yuv420p -c:a aac -b:a 96k -movflags +faststart out/documentary-telegram.mp4
+          SIZE=$(stat -c%s out/documentary-telegram.mp4)
+          if [ "$SIZE" -gt 48000000 ]; then
+            ffmpeg -y -i out/documentary-telegram.mp4 -c:v libx264 -preset slow -b:v 1350k -maxrate 1350k -bufsize 2700k -pix_fmt yuv420p -c:a aac -b:a 80k -movflags +faststart out/documentary-telegram-small.mp4
+            mv out/documentary-telegram-small.mp4 out/documentary-telegram.mp4
+            SIZE=$(stat -c%s out/documentary-telegram.mp4)
+          fi
+          test "$SIZE" -lt 49000000
+          ffprobe -v error -show_entries stream=codec_type,codec_name,width,height -show_entries format=duration -of json out/documentary-telegram.mp4
+
+      - name: Upload final documentary and production project
         uses: actions/upload-artifact@v4
         with:
-          name: michkatt-unpacked-documentary-package
-          path: extracted/
+          name: michkatt-final-documentary
+          path: |
+            out/documentary.mp4
+            out/documentary-telegram.mp4
+            public/project/
+            public/assets/
           if-no-files-found: error
           retention-days: 14
-      - name: Notify Telegram
-        if: ${{ always() && inputs.telegram_chat_id != '' }}
+
+      - name: Deliver the finished MP4 to Telegram
+        if: ${{ env.TELEGRAM_CHAT_ID != '' }}
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CHAT_ID: ${{ inputs.telegram_chat_id }}
-          JOB_STATUS: ${{ job.status }}
         run: |
-          if [ "$JOB_STATUS" = "success" ]; then
-            MESSAGE="تم فك ضغط ZIP بنجاح والتحقق من الملفات الستة، بما فيها director_blueprint.json وasset_manifest.json. حُفظت الملفات كـ Artifact باسم michkatt-unpacked-documentary-package. لم يتم استدعاء OpenAI."
-          else
-            MESSAGE="فشل فك ضغط ZIP أو التحقق منه. افتح سجل GitHub Actions لمعرفة الملف أو السبب."
-          fi
-          curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d "chat_id=${CHAT_ID}" --data-urlencode "text=${MESSAGE}"
-  render:
-    if: ${{ inputs.telegram_zip_file_id == '' }}
+          set -euo pipefail
+          test -n "$TELEGRAM_BOT_TOKEN"
+          test -s out/documentary-telegram.mp4
+          RESPONSE=$(curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" -F "chat_id=$TELEGRAM_CHAT_ID" -F "document=@out/documentary-telegram.mp4;type=video/mp4" -F "caption=🎬 تم إنتاج الوثائقي وفحص ملف الفيديو بنجاح عبر OpenMontage وRemotion، مع تعليق صوتي Piper وموسيقى أصلية. لم يتم استخدام OpenAI API.")
+          echo "$RESPONSE" | python -c 'import json,sys; d=json.load(sys.stdin); assert d.get("ok"), d; print("Telegram accepted: "+d["result"]["document"]["file_name"])'
+
+      - name: Notify Telegram if production fails
+        if: ${{ failure() && env.TELEGRAM_CHAT_ID != '' }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d "chat_id=$TELEGRAM_CHAT_ID" --data-urlencode "text=تعثر إنتاج الوثائقي في مرحلة من مراحل OpenMontage أو Remotion. لم أرسل فيديو غير مكتمل؛ راجع سجل GitHub Actions."
+
+  demo:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.telegram_zip_file_id == '' && inputs.production_script == '' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install
+      - run: npm ci
       - run: npm test
-      - name: Save supplied YouTube reference links
-        if: ${{ inputs.reference_urls != '' }}
-        env:
-          YOUTUBE_REFERENCE_URLS: ${{ inputs.reference_urls }}
-        run: |
-          node --input-type=module -e '
-            import { saveReferenceProfile } from "./src/reference-videos.mjs";
-            const urls = (process.env.YOUTUBE_REFERENCE_URLS || "").split(/\s+/).filter(Boolean);
-            const profile = await saveReferenceProfile(urls);
-            console.log(`Saved ${profile.referenceCount} reference URLs.`);
-          '
-      - name: Generate AI-directed scenes, stock footage, and voice narration
-        if: ${{ inputs.production_script != '' }}
-        env:
-          SCRIPT_TEXT: ${{ inputs.production_script }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
-          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
-          TTS_VOICE: ${{ secrets.TTS_VOICE }}
-        run: |
-          if [ -z "$OPENAI_API_KEY" ] || [ -z "$PEXELS_API_KEY" ]; then
-            echo "::error::This text-only production route requires OPENAI_API_KEY and PEXELS_API_KEY."
-            exit 1
-          fi
-          node --input-type=module -e 'import {writeFile} from "node:fs/promises"; await writeFile("production-topic.txt", process.env.SCRIPT_TEXT);'
-          node src/production-agent.mjs production-topic.txt
-          npm run render:project
-      - name: Render technical demo when no script was supplied
-        if: ${{ inputs.production_script == '' }}
-        run: npm run render:demo
-      - name: Upload generated documentary
-        uses: actions/upload-artifact@v4
+      - run: npm run render:demo
+      - uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.production_script != '' && 'generated-documentary' || 'documentary-demo-mp4' }}
-          path: ${{ inputs.production_script != '' && 'out/documentary.mp4' || 'out/demo.mp4' }}
+          name: documentary-demo-mp4
+          path: out/demo.mp4
           if-no-files-found: error

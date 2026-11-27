@@ -1,8 +1,9 @@
 import React from "react";
-import {AbsoluteFill, Audio, Img, Sequence, Video, interpolate, useCurrentFrame, useVideoConfig} from "remotion";
+import {AbsoluteFill, Audio, Img, Sequence, Video, interpolate, useCurrentFrame, useVideoConfig, staticFile} from "remotion";
 import {demoBlueprint, SceneBlueprint, Soundtrack} from "./blueprint";
 
 const secondsToFrames=(seconds:number,fps:number)=>Math.round(seconds*fps);
+const projectAsset=(src:string)=>staticFile(src.startsWith("/")?src.slice(1):src);
 
 const SceneView:React.FC<{scene:SceneBlueprint;index:number;start:number}> = ({scene,index,start})=>{
  const frame=useCurrentFrame(); const {fps,durationInFrames}=useVideoConfig();
@@ -22,8 +23,8 @@ const SceneView:React.FC<{scene:SceneBlueprint;index:number;start:number}> = ({s
  const accent=visual.accent??"#7CE7D4";
  const background=visual.background??"#080D18";
  return <AbsoluteFill style={{background,color:"#F4F7FB",overflow:"hidden",opacity,transform:transitionTransform,clipPath:transitionClip}}>
-  {visual.kind==="video" && <Video src={visual.src} style={{width:"100%",height:"100%",objectFit:"cover",transform:`scale(${zoom})`}} />}
-  {visual.kind==="image" && <Img src={visual.src} style={{width:"100%",height:"100%",objectFit:"cover",transform:`scale(${zoom})`}} />}
+  {visual.kind==="video" && <Video muted src={projectAsset(visual.src)} style={{width:"100%",height:"100%",objectFit:"cover",transform:`scale(${zoom})`}} />}
+  {visual.kind==="image" && <Img src={projectAsset(visual.src)} style={{width:"100%",height:"100%",objectFit:"cover",transform:`scale(${zoom})`}} />}
   {visual.kind==="graphic" && <AbsoluteFill style={{background}}>
     <AbsoluteFill style={{opacity:.16,backgroundImage:"linear-gradient(rgba(124,231,212,.16) 1px, transparent 1px),linear-gradient(90deg, rgba(124,231,212,.16) 1px, transparent 1px)",backgroundSize:"80px 80px",transform:`scale(${zoom})`}} />
     <div style={{position:"absolute",width:760,height:760,borderRadius:"50%",right:-180,top:-240,border:`1px solid ${accent}55`,boxShadow:`0 0 160px ${accent}22`}} />
@@ -38,7 +39,7 @@ const SceneView:React.FC<{scene:SceneBlueprint;index:number;start:number}> = ({s
     const fadeIn=secondsToFrames(layer.fadeInSeconds??0,fps);
     const fadeOut=secondsToFrames(layer.fadeOutSeconds??0,fps);
     return <Sequence key={i} from={audioStart} durationInFrames={Math.max(1,Math.min(audioLength,length-audioStart))}>
-      <Audio src={layer.src} loop={layer.loop} volume={(f)=>interpolate(f,[0,Math.max(1,fadeIn),Math.max(1,audioLength-fadeOut),audioLength],[0,layer.volume??1,layer.volume??1,0],{extrapolateLeft:"clamp",extrapolateRight:"clamp"})}/>
+      <Audio src={projectAsset(layer.src)} loop={layer.loop} volume={(f)=>interpolate(f,[0,Math.max(1,fadeIn),Math.max(1,audioLength-fadeOut),audioLength],[0,layer.volume??1,layer.volume??1,0],{extrapolateLeft:"clamp",extrapolateRight:"clamp"})}/>
     </Sequence>;
   })}
  </AbsoluteFill>;
@@ -53,7 +54,7 @@ export const Documentary:React.FC<{scenes?:SceneBlueprint[];soundtrack?:Soundtra
  const current=arranged.find(({start,scene})=>frame>=start&&frame<start+secondsToFrames(scene.durationSeconds,fps))?.scene;
  const musicVolume=soundtrack?interpolate(frame,[0,secondsToFrames(soundtrack.fadeInSeconds??4,fps),cursor-secondsToFrames(soundtrack.fadeOutSeconds??5,fps),cursor],[0,soundtrack.volume??.22,soundtrack.volume??.22,0],{extrapolateLeft:"clamp",extrapolateRight:"clamp"}):0;
  return <AbsoluteFill style={{fontFamily:"Arial, sans-serif",background:"#080D18"}}>
-  {soundtrack?.src&&<Audio src={soundtrack.src} volume={(f)=>{const voiceActive=arranged.some(({scene,start})=>frame>=start&&frame<start+secondsToFrames(scene.durationSeconds,fps)&&(scene.audio??[]).length>0);return musicVolume*(voiceActive?(soundtrack.duckingVolume??.1)/(soundtrack.volume??.22):1);}}/>}
+  {soundtrack?.src&&<Audio src={projectAsset(soundtrack.src)} volume={(f)=>{const voiceActive=arranged.some(({scene,start})=>frame>=start&&frame<start+secondsToFrames(scene.durationSeconds,fps)&&(scene.audio??[]).length>0);return musicVolume*(voiceActive?(soundtrack.duckingVolume??.1)/(soundtrack.volume??.22):1);}}/>}
   {arranged.map(({scene,start},i)=><Sequence key={scene.id} from={start} durationInFrames={secondsToFrames(scene.durationSeconds,fps)}><SceneView scene={scene} index={i} start={start}/></Sequence>)}
   <div style={{position:"absolute",left:135,bottom:100,width:1650,height:3,background:"#263247"}}><div style={{height:3,width:`${progress}%`,background:current?.visual.accent??"#7CE7D4"}}/></div>
   <div style={{position:"absolute",right:135,bottom:125,fontSize:20,color:"#8391A8",letterSpacing:4}}>FIELD NOTES / {String(arranged.indexOf(arranged.find(x=>x.scene===current)??arranged[0])+1).padStart(3,"0")}</div>
