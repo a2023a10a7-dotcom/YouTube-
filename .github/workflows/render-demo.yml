@@ -42,6 +42,13 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r vendor/OpenMontage/requirements.txt yt-dlp youtube-transcript-api "scenedetect[opencv]"
           if [ "${{ inputs.offline_production || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary')) }}" = "true" ]; then python -m pip install piper-tts; fi
+      - name: Install offline TTS runtime
+        if: ${{ inputs.offline_production || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary')) }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install piper-tts
       - uses: actions/setup-node@v4
         with:
           node-version: 24
