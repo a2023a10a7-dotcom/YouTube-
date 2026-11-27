@@ -77,11 +77,11 @@ function makeBot(env) {
       : "البوت يعمل عبر Webhook ويستقبل الرسائل. إرسال طلبات الإنتاج مقفل حتى ضبط ALLOWED_TELEGRAM_USER_ID لحماية رصيد الخدمات.");
   });
 
-  bot.on("message:text", async (ctx) => {
+  const submitBrief = async (ctx, rawBrief) => {
     if (ctx.chat.type !== "private") return;
-    const text = ctx.message.text.trim();
-    if (text.startsWith("/")) {
-      await ctx.reply("الأمر غير معروف. أرسل /help.");
+    const brief = String(rawBrief || "").trim();
+    if (!brief) {
+      await ctx.reply("أرسل الموضوع بعد الأمر، مثال: /topic The Great Molasses Flood of 1919");
       return;
     }
     if (!env.ALLOWED_TELEGRAM_USER_ID || String(ctx.from.id) !== String(env.ALLOWED_TELEGRAM_USER_ID)) {
@@ -94,12 +94,17 @@ function makeBot(env) {
     }
     await ctx.reply("وصلني طلبك. أتحقق من إرساله إلى مسار الإنتاج...");
     try {
-      const count = await dispatchProduction(env, text, ctx.chat.id);
+      const count = await dispatchProduction(env, brief, ctx.chat.id);
       await ctx.reply(`تم إرسال طلب الإنتاج إلى GitHub Actions بنجاح. عدد روابط YouTube المرفقة: ${count}. سأرسل نتيجة التشغيل إلى هذه المحادثة عند اكتمال مسار الإنتاج.`);
     } catch (error) {
       await ctx.reply(`تعذر إطلاق مسار الإنتاج: ${String(error.message || error).slice(0, 700)}`);
     }
-  });
+  };
+
+  bot.command("produce", (ctx) => submitBrief(ctx, ctx.match));
+  bot.command("topic", (ctx) => submitBrief(ctx, ctx.match));
+
+  bot.on("message:text", (ctx) => submitBrief(ctx, ctx.message.text));
 
   return bot;
 }
