@@ -6,6 +6,10 @@ on:
         description: "Paste 3 or 5 YouTube reference links, one per line (optional)"
         required: false
         type: string
+      telegram_chat_id:
+        description: "Private Telegram chat ID supplied by the inbox bridge."
+        required: false
+        type: string
       production_script:
         description: "Documentary topic. Paid AI production path; requires API credits."
         required: false
@@ -26,6 +30,8 @@ on:
 jobs:
   render:
     runs-on: ubuntu-latest
+    env:
+      TELEGRAM_CHAT_ID: ${{ inputs.telegram_chat_id }}
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -96,6 +102,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -n "${TELEGRAM_CHAT_ID:-}" ]; then echo "Using chat ID supplied by Telegram inbox bridge."; exit 0; fi
           if [ -z "$TELEGRAM_BOT_TOKEN" ]; then echo "Telegram token not configured; notifications will be skipped."; exit 0; fi
           response=$(curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates")
           ok=$(printf '%s' "$response" | jq -r '.ok // false')
