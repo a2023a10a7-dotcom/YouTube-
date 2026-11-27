@@ -61,11 +61,11 @@ jobs:
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4.1-mini' }}
         run: node src/reference-video-analysis.mjs
       - name: Resolve Telegram chat from the bot's incoming message
-        if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' }}
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then echo "Telegram token not configured; skipping connection test."; exit 0; fi
           updates=$(curl -fsS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates")
           chat_id=$(printf '%s' "$updates" | jq -r '[.result[]? | select(.message.chat.type == "private") | .message.chat.id] | last // empty')
           if [ -z "$chat_id" ]; then
