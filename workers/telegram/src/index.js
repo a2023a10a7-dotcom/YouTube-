@@ -32,10 +32,10 @@ function makeBot(env) {
   const ready = () => Boolean(env.GITHUB_TOKEN && env.GITHUB_REPOSITORY);
 
   bot.command("start", async (ctx) => {
-    if (ctx.chat.type === "private") await ctx.reply("مرحباً بك في Michkatt.\n\nأرسل ملف ZIP الذي يحتوي على ملفات المشروع الستة، وسأفك ضغطه وأتحقق منه. لا حاجة إلى OpenAI لفك الضغط.\n\nالأوامر: /help /status /whoami");
+    if (ctx.chat.type === "private") await ctx.reply("مرحباً بك في Michkatt.\n\nأرسل ملف ZIP الذي يحتوي على ملفات المشروع الستة، وسأشغّل خط الإنتاج الكامل: OpenMontage لاختيار الأصول، Piper للتعليق الصوتي، وRemotion للمونتاج وإنتاج MP4، ثم أرسل الفيديو هنا. لا نستخدم OpenAI API.\n\nالأوامر: /help /status /whoami");
   });
   bot.command("help", async (ctx) => {
-    await ctx.reply("أرسل ملف ZIP كمستند (Document)، وليس كصورة. يجب أن يحتوي على project_brief.md وresearch_analysis.md وdocumentary_screenplay.md وdirector_blueprint.md وdirector_blueprint.json وasset_manifest.json. سأفكّه وأتحقق من الملفات دون استدعاء OpenAI.");
+    await ctx.reply("أرسل ملف ZIP كمستند (Document)، وليس كصورة. يجب أن يحتوي على project_brief.md وresearch_analysis.md وdocumentary_screenplay.md وdirector_blueprint.md وdirector_blueprint.json وasset_manifest.json. سأنتج الوثائقي فعلياً عبر OpenMontage وPiper وRemotion، ثم أرسل MP4 هنا. لا يتم استدعاء OpenAI API.");
   });
   bot.command("whoami", async (ctx) => ctx.reply(`Telegram user ID: ${ctx.from.id}`));
   bot.command("status", async (ctx) => ctx.reply(authorized(ctx) ? "البوت يعمل وحسابك مخوّل." : "البوت يعمل، لكن حسابك غير مخوّل بعد."));
@@ -54,37 +54,27 @@ function makeBot(env) {
     }
     if (!authorized(ctx)) { await ctx.reply("وصل الملف، لكن حسابك غير مخوّل. أرسل /whoami."); return; }
     if (!ready()) { await ctx.reply("إعداد GitHub غير مكتمل في Worker."); return; }
-    await ctx.reply("استلمت ملف ZIP. أرسلته الآن إلى مهمة فك الضغط والتحقق؛ لن أعيد البحث أو كتابة السيناريو عبر OpenAI.");
+    await ctx.reply("استلمت ملف ZIP. أبدأ الآن إنتاج الوثائقي من الحزمة المرفقة باستخدام OpenMontage وPiper وRemotion. لن أعيد كتابة السيناريو أو أستدعي OpenAI API.");
     try {
       await dispatch(env, {
         telegram_zip_file_id: doc.file_id,
         telegram_zip_name: filename.slice(0, 200),
         telegram_chat_id: String(ctx.chat.id),
       });
-      await ctx.reply("تم إطلاق مهمة فك الضغط على GitHub Actions. سأرسل نتيجة التحقق هنا.");
+      await ctx.reply("تم إطلاق خط إنتاج الوثائقي على GitHub Actions. بعد اكتمال المونتاج وفحص MP4 سأرسله إلى هذه المحادثة.");
     } catch (error) {
       await ctx.reply(`تعذر إطلاق فك الضغط: ${String(error.message || error).slice(0, 600)}`);
     }
   });
 
-  const submitBrief = async (ctx, raw) => {
+  const rejectText = async (ctx) => {
     if (ctx.chat.type !== "private") return;
-    if (!authorized(ctx)) { await ctx.reply("حسابك غير مخوّل لإطلاق الإنتاج."); return; }
-    if (!ready()) { await ctx.reply("إعداد GitHub غير مكتمل."); return; }
-    const brief = String(raw || "").trim();
-    if (!brief) { await ctx.reply("أرسل موضوع الوثائقي بعد الأمر."); return; }
-    const urls = [...brief.matchAll(/https?:\/\/[^\s]+/g)].map((m) => m[0].replace(/[),.;]+$/, ""));
-    const cleanBrief = brief.replace(/https?:\/\/[^\s]+/g, " ").replace(/\s+/g, " ").trim();
-    try {
-      await dispatch(env, { production_script: cleanBrief.slice(0, 60000), reference_urls: urls.join("\n"), telegram_chat_id: String(ctx.chat.id) });
-      await ctx.reply("تم إرسال موجز الإنتاج إلى GitHub Actions. هذا المسار النصي منفصل عن فك ضغط ZIP.");
-    } catch (error) { await ctx.reply(`تعذر إطلاق المسار: ${String(error.message || error).slice(0, 600)}`); }
+    await ctx.reply("لإنتاج الوثائقي، أرسل حزمة ZIP الكاملة كمستند. مسار النص المنفصل متوقف حتى لا يستخدم أي خدمة OpenAI.");
   };
-  bot.command("produce", (ctx) => submitBrief(ctx, ctx.match));
-  bot.command("topic", (ctx) => submitBrief(ctx, ctx.match));
-  bot.on("message:text", (ctx) => {
-    const t = ctx.message.text.trim();
-    if (!t.startsWith("/")) return submitBrief(ctx, t);
+  bot.command("produce", rejectText);
+  bot.command("topic", rejectText);
+  bot.on("message:text", async (ctx) => {
+    if (!ctx.message.text.trim().startsWith("/")) return rejectText(ctx);
   });
   return bot;
 }
