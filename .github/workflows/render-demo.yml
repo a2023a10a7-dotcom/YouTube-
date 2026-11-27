@@ -61,22 +61,26 @@ jobs:
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4.1-mini' }}
         run: node src/reference-video-analysis.mjs
       - name: Resolve Telegram chat from the bot's incoming message
+        continue-on-error: true
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then echo "Telegram token not configured; skipping connection test."; exit 0; fi
-          updates=$(curl -fsS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates")
-          chat_id=$(printf '%s' "$updates" | jq -r '[.result[]? | select(.message.chat.type == "private") | .message.chat.id] | last // empty')
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then echo "Telegram token not configured; notifications will be skipped."; exit 0; fi
+          response=$(curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates")
+          ok=$(printf '%s' "$response" | jq -r '.ok // false')
+          if [ "$ok" != "true" ]; then
+            description=$(printf '%s' "$response" | jq -r '.description // "Unknown Telegram API error"')
+            echo "::warning::Telegram getUpdates failed: $description"
+            exit 0
+          fi
+          chat_id=$(printf '%s' "$response" | jq -r '[.result[]? | select(.message.chat.type == "private") | .message.chat.id] | last // empty')
           if [ -z "$chat_id" ]; then
-            echo "::error::No private chat found. Open https://t.me/Michkatt_bot and send /start or any message, then rerun production."
-            exit 1
+            echo "::warning::No private Telegram chat update found yet; production will continue without Telegram delivery."
+            exit 0
           fi
           echo "TELEGRAM_CHAT_ID=$chat_id" >> "$GITHUB_ENV"
           echo "Telegram private chat detected; chat ID stored for this workflow only."
-          curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \\
-            --data-urlencode "chat_id=$chat_id" \\
-            --data-urlencode "text=✅ Telegram connection test successful. Your documentary research, English script, and AI Director blueprint will be delivered here when production runs."
       - name: Generate AI-directed scenes, stock footage, and voice narration
         if: ${{ inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood')) }}
         env:
@@ -86,8 +90,6 @@ jobs:
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4.1-mini' }}
           OPENAI_RESEARCH_MODEL: ${{ secrets.OPENAI_RESEARCH_MODEL || 'gpt-4.1-mini' }}
           TTS_VOICE: ${{ secrets.TTS_VOICE || 'alloy' }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ env.TELEGRAM_CHAT_ID }}
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
             echo "::error::Production mode requires OPENAI_API_KEY in repository Actions secrets."
@@ -100,15 +102,17 @@ jobs:
           fi
           echo "Using research model: ${OPENAI_RESEARCH_MODEL}; production model: ${OPENAI_MODEL}"
           node src/production-agent.mjs production-topic.txt
-          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
-            node src/telegram-notify.mjs
-          else
-            echo "::warning::Telegram delivery skipped. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID repository secrets."
-          fi
           npm run render:project
       - name: Verify production render and project asset provenance
         if: ${{ inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood')) }}
         run: npm run qa:render
+      - name: Deliver research, script and director blueprint to Telegram
+        if: ${{ success() && (inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood'))) && env.TELEGRAM_CHAT_ID != '' }}
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ env.TELEGRAM_CHAT_ID }}
+        run: node src/telegram-notify.mjs
       - name: Render the technical demo when no script was supplied
         if: ${{ inputs.production_script == '' && !(github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood')) }}
         run: npm run render:demo
