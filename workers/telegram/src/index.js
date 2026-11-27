@@ -1,151 +1,110 @@
 import { Bot, webhookCallback } from "grammy";
 
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
-  status,
-  headers: { "content-type": "application/json; charset=utf-8" },
+  status, headers: { "content-type": "application/json; charset=utf-8" },
 });
 
 async function telegramApi(token, method, payload) {
   const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload),
   });
   const result = await response.json();
   if (!response.ok || !result.ok) throw new Error(`Telegram API ${method} failed: ${result.description || response.status}`);
   return result.result;
 }
 
-async function dispatchProduction(env, brief, chatId) {
-  const urls = [...brief.matchAll(/https?:\/\/[^\s]+/g)].map((m) => m[0].replace(/[),.;]+$/, ""));
-  const cleanBrief = brief.replace(/https?:\/\/[^\s]+/g, " ").replace(/\s+/g, " ").trim()
-    || "Create a documentary based on the supplied reference videos.";
-  if (cleanBrief.length > 60000) throw new Error("The production brief is too long (maximum 60,000 characters).");
-  const response = await fetch(
-    `https://api.github.com/repos/${env.GITHUB_REPOSITORY}/actions/workflows/render-demo.yml/dispatches`,
-    {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${env.GITHUB_TOKEN}`,
-        accept: "application/vnd.github+json",
-        "content-type": "application/json",
-        "x-github-api-version": "2022-11-28",
-        "user-agent": "Michkatt-grammy-worker",
-      },
-      body: JSON.stringify({
-        ref: env.PRODUCTION_BRANCH || "integrate/openmontage",
-        inputs: {
-          production_script: cleanBrief,
-          reference_urls: urls.join("\n"),
-          telegram_chat_id: String(chatId),
-        },
-      }),
+async function dispatch(env, inputs) {
+  const response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPOSITORY}/actions/workflows/render-demo.yml/dispatches`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${env.GITHUB_TOKEN}`, accept: "application/vnd.github+json",
+      "content-type": "application/json", "x-github-api-version": "2022-11-28",
+      "user-agent": "Michkatt-grammy-worker",
     },
-  );
-  if (response.status !== 204) {
-    const detail = await response.text();
-    throw new Error(`GitHub workflow dispatch failed (HTTP ${response.status}): ${detail.slice(0, 500)}`);
-  }
-  return urls.length;
+    body: JSON.stringify({ ref: env.PRODUCTION_BRANCH || "main", inputs }),
+  });
+  if (response.status !== 204) throw new Error(`GitHub workflow dispatch failed (HTTP ${response.status}): ${(await response.text()).slice(0, 500)}`);
 }
 
 function makeBot(env) {
   const bot = new Bot(env.TELEGRAM_BOT_TOKEN);
+  const authorized = (ctx) => Boolean(env.ALLOWED_TELEGRAM_USER_ID) && String(ctx.from?.id) === String(env.ALLOWED_TELEGRAM_USER_ID);
+  const ready = () => Boolean(env.GITHUB_TOKEN && env.GITHUB_REPOSITORY);
 
   bot.command("start", async (ctx) => {
-    if (ctx.chat.type !== "private") return;
-    await ctx.reply(
-      "مرحباً بك في Michkatt.\n\nأرسل موضوع الوثائقي أو موجز الإنتاج، وأرفق روابط YouTube المرجعية إن وجدت.\n\nالأوامر: /help /status /whoami"
-    );
+    if (ctx.chat.type === "private") await ctx.reply("مرحباً بك في Michkatt.\n\nأرسل ملف ZIP الذي يحتوي على ملفات المشروع الستة، وسأفك ضغطه وأتحقق منه. لا حاجة إلى OpenAI لفك الضغط.\n\nالأوامر: /help /status /whoami");
   });
-
   bot.command("help", async (ctx) => {
-    await ctx.reply(
-      "أرسل رسالة واحدة تتضمن موضوع الفيديو وتعليماتك وروابط المراجع.\n\nمثال:\n/produce The Great Molasses Flood of 1919\nhttps://youtube.com/...\n\nسأحوّل الطلب إلى مسار الإنتاج. لا أرسل الفيديو إلا بعد نجاح الرندر وفحوص الجودة."
-    );
+    await ctx.reply("أرسل ملف ZIP كمستند (Document)، وليس كصورة. يجب أن يحتوي على project_brief.md وresearch_analysis.md وdocumentary_screenplay.md وdirector_blueprint.md وdirector_blueprint.json وasset_manifest.json. سأفكّه وأتحقق من الملفات دون استدعاء OpenAI.");
   });
+  bot.command("whoami", async (ctx) => ctx.reply(`Telegram user ID: ${ctx.from.id}`));
+  bot.command("status", async (ctx) => ctx.reply(authorized(ctx) ? "البوت يعمل وحسابك مخوّل." : "البوت يعمل، لكن حسابك غير مخوّل بعد."));
 
-  bot.command("whoami", async (ctx) => {
-    await ctx.reply(`Telegram user ID: ${ctx.from.id}\nأرسل هذا الرقم إلى إعدادات مسؤول البوت لإضافته إلى قائمة السماح.`);
-  });
-
-  bot.command("status", async (ctx) => {
-    const allowed = Boolean(env.ALLOWED_TELEGRAM_USER_ID)
-      && String(ctx.from.id) === String(env.ALLOWED_TELEGRAM_USER_ID);
-    await ctx.reply(allowed
-      ? "البوت يعمل عبر Webhook، وحسابك مخوّل بإرسال طلبات الإنتاج."
-      : "البوت يعمل عبر Webhook ويستقبل الرسائل. إرسال طلبات الإنتاج مقفل حتى ضبط ALLOWED_TELEGRAM_USER_ID لحماية رصيد الخدمات.");
-  });
-
-  const submitBrief = async (ctx, rawBrief) => {
+  bot.on("message:document", async (ctx) => {
     if (ctx.chat.type !== "private") return;
-    const brief = String(rawBrief || "").trim();
-    if (!brief) {
-      await ctx.reply("أرسل الموضوع بعد الأمر، مثال: /topic The Great Molasses Flood of 1919");
+    const doc = ctx.message.document;
+    const filename = doc.file_name || "";
+    if (!filename.toLowerCase().endsWith(".zip") || doc.mime_type && !["application/zip", "application/x-zip-compressed", "application/octet-stream"].includes(doc.mime_type)) {
+      await ctx.reply("أرسل الملف بصيغة ZIP كمستند Telegram.");
       return;
     }
-    if (!env.ALLOWED_TELEGRAM_USER_ID || String(ctx.from.id) !== String(env.ALLOWED_TELEGRAM_USER_ID)) {
-      await ctx.reply("وصلت رسالتك، لكن حسابك غير مخوّل بإطلاق الإنتاج بعد. أرسل /whoami لمعرفة رقم Telegram الخاص بك.");
+    if (doc.file_size && doc.file_size > 20 * 1024 * 1024) {
+      await ctx.reply("حجم ZIP يتجاوز حد Telegram Bot API البالغ 20 ميغابايت.");
       return;
     }
-    if (!env.GITHUB_TOKEN || !env.GITHUB_REPOSITORY) {
-      await ctx.reply("البوت يستقبل الرسائل، لكن ربط GitHub لم يكتمل بعد.");
-      return;
-    }
-    await ctx.reply("وصلني طلبك. أتحقق من إرساله إلى مسار الإنتاج...");
+    if (!authorized(ctx)) { await ctx.reply("وصل الملف، لكن حسابك غير مخوّل. أرسل /whoami."); return; }
+    if (!ready()) { await ctx.reply("إعداد GitHub غير مكتمل في Worker."); return; }
+    await ctx.reply("استلمت ملف ZIP. أرسلته الآن إلى مهمة فك الضغط والتحقق؛ لن أعيد البحث أو كتابة السيناريو عبر OpenAI.");
     try {
-      const count = await dispatchProduction(env, brief, ctx.chat.id);
-      await ctx.reply(`تم إرسال طلب الإنتاج إلى GitHub Actions بنجاح. عدد روابط YouTube المرفقة: ${count}. سأرسل نتيجة التشغيل إلى هذه المحادثة عند اكتمال مسار الإنتاج.`);
+      await dispatch(env, {
+        telegram_zip_file_id: doc.file_id,
+        telegram_zip_name: filename.slice(0, 200),
+        telegram_chat_id: String(ctx.chat.id),
+      });
+      await ctx.reply("تم إطلاق مهمة فك الضغط على GitHub Actions. سأرسل نتيجة التحقق هنا.");
     } catch (error) {
-      await ctx.reply(`تعذر إطلاق مسار الإنتاج: ${String(error.message || error).slice(0, 700)}`);
+      await ctx.reply(`تعذر إطلاق فك الضغط: ${String(error.message || error).slice(0, 600)}`);
     }
-  };
+  });
 
+  const submitBrief = async (ctx, raw) => {
+    if (ctx.chat.type !== "private") return;
+    if (!authorized(ctx)) { await ctx.reply("حسابك غير مخوّل لإطلاق الإنتاج."); return; }
+    if (!ready()) { await ctx.reply("إعداد GitHub غير مكتمل."); return; }
+    const brief = String(raw || "").trim();
+    if (!brief) { await ctx.reply("أرسل موضوع الوثائقي بعد الأمر."); return; }
+    const urls = [...brief.matchAll(/https?:\/\/[^\s]+/g)].map((m) => m[0].replace(/[),.;]+$/, ""));
+    const cleanBrief = brief.replace(/https?:\/\/[^\s]+/g, " ").replace(/\s+/g, " ").trim();
+    try {
+      await dispatch(env, { production_script: cleanBrief.slice(0, 60000), reference_urls: urls.join("\n"), telegram_chat_id: String(ctx.chat.id) });
+      await ctx.reply("تم إرسال موجز الإنتاج إلى GitHub Actions. هذا المسار النصي منفصل عن فك ضغط ZIP.");
+    } catch (error) { await ctx.reply(`تعذر إطلاق المسار: ${String(error.message || error).slice(0, 600)}`); }
+  };
   bot.command("produce", (ctx) => submitBrief(ctx, ctx.match));
   bot.command("topic", (ctx) => submitBrief(ctx, ctx.match));
-
-  bot.on("message:text", (ctx) => submitBrief(ctx, ctx.message.text));
-
+  bot.on("message:text", (ctx) => {
+    const t = ctx.message.text.trim();
+    if (!t.startsWith("/")) return submitBrief(ctx, t);
+  });
   return bot;
 }
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (request.method === "GET" && url.pathname === "/health") {
-      return json({ ok: true, service: "michkatt-telegram-webhook", framework: "grammY" });
-    }
-
+    if (request.method === "GET" && url.pathname === "/health") return json({ ok: true, service: "michkatt-telegram-webhook", framework: "grammY" });
     if ((request.method === "GET" || request.method === "POST") && url.pathname === `/setup/${env.SETUP_SECRET || "disabled"}`) {
-      if (!env.SETUP_SECRET || !env.WORKER_URL || !env.TELEGRAM_WEBHOOK_SECRET) {
-        return json({ ok: false, error: "Webhook setup secrets are incomplete." }, 503);
-      }
+      if (!env.SETUP_SECRET || !env.WORKER_URL || !env.TELEGRAM_WEBHOOK_SECRET || !env.TELEGRAM_BOT_TOKEN) return json({ ok: false, error: "Webhook setup secrets are incomplete." }, 503);
       try {
-        const result = await telegramApi(env.TELEGRAM_BOT_TOKEN, "setWebhook", {
-          url: env.WORKER_URL,
-          secret_token: env.TELEGRAM_WEBHOOK_SECRET,
-          allowed_updates: ["message"],
-          drop_pending_updates: false,
-        });
+        const result = await telegramApi(env.TELEGRAM_BOT_TOKEN, "setWebhook", { url: env.WORKER_URL, secret_token: env.TELEGRAM_WEBHOOK_SECRET, allowed_updates: ["message"], drop_pending_updates: false });
         return json({ ok: true, webhook_set: result });
-      } catch (error) {
-        return json({ ok: false, error: String(error.message || error) }, 502);
-      }
+      } catch (error) { return json({ ok: false, error: String(error.message || error) }, 502); }
     }
-
     if (request.method !== "POST") return new Response("Not found", { status: 404 });
-    if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_WEBHOOK_SECRET) {
-      return json({ ok: false, error: "Telegram secrets are not configured." }, 503);
-    }
-
+    if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_WEBHOOK_SECRET) return json({ ok: false, error: "Telegram secrets are not configured." }, 503);
     try {
       const bot = makeBot(env);
-      const handleUpdate = webhookCallback(bot, "cloudflare-mod", {
-        secretToken: env.TELEGRAM_WEBHOOK_SECRET,
-      });
-      return await handleUpdate(request);
-    } catch (error) {
-      return json({ ok: false, error: String(error.message || error) }, 500);
-    }
+      return await webhookCallback(bot, "cloudflare-mod", { secretToken: env.TELEGRAM_WEBHOOK_SECRET })(request);
+    } catch (error) { return json({ ok: false, error: String(error.message || error) }, 500); }
   },
 };
