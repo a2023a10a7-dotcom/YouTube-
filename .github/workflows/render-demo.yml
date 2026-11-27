@@ -102,7 +102,7 @@ jobs:
           test -s incoming/package.zip
 
       - name: Download the already validated ZIP artifact for the first end-to-end run
-        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[render-existing-artifact]') }}
+        if: ${{ github.event_name == 'push' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
