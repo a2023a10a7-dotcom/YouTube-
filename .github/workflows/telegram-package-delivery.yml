@@ -1,0 +1,56 @@
+name: Deliver documentary editorial package to Telegram
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "data/offline-package/**"
+jobs:
+  deliver:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integrate/openmontage
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Prepare delivery files
+        run: |
+          mkdir -p public/project
+          cp data/offline-package/research.json public/project/research.json
+          cp data/offline-package/script.txt public/project/script.txt
+          cp data/offline-package/blueprint.json public/project/blueprint.json
+          cp data/offline-package/SOURCES.md public/project/SOURCES.md
+      - name: Resolve Telegram destination
+        id: telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
+            echo "::error::TELEGRAM_BOT_TOKEN is not configured."
+            exit 1
+          fi
+          response=$(curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates")
+          ok=$(printf '%s' "$response" | jq -r '.ok // false')
+          if [ "$ok" != "true" ]; then
+            description=$(printf '%s' "$response" | jq -r '.description // "Unknown Telegram API error"')
+            echo "::error::Telegram getUpdates failed: $description"
+            exit 1
+          fi
+          chat_id=$(printf '%s' "$response" | jq -r '[.result[]? | select(.message.chat.type == "private") | .message.chat.id] | last // empty')
+          if [ -z "$chat_id" ]; then
+            echo "::error::No private chat found. Send /start to the bot, then rerun this workflow."
+            exit 1
+          fi
+          echo "chat_id=$chat_id" >> "$GITHUB_OUTPUT"
+      - name: Send research, script, director blueprint and sources
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ steps.telegram.outputs.chat_id }}
+        run: node src/telegram-notify.mjs
+      - name: Upload editorial package
+        uses: actions/upload-artifact@v4
+        with:
+          name: molasses-flood-editorial-package
+          path: public/project/

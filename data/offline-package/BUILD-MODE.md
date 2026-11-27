@@ -1,0 +1,1 @@
+Offline documentary build uses the free Piper voice model and license-filtered Wikimedia Commons archive images. No paid model API is required. The GitHub Actions run renders the final MP4 and validates its streams, duration, and asset provenance before Telegram delivery.

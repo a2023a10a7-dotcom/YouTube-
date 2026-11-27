@@ -7,11 +7,17 @@ on:
         required: false
         type: string
       production_script:
-        description: "Documentary topic. Production mode researches, scripts, selects clips, narrates and renders. Requires OPENAI_API_KEY and PEXELS_API_KEY secrets."
+        description: "Documentary topic. Paid AI production path; requires API credits."
         required: false
         type: string
+      offline_production:
+        description: "Build the Great Molasses Flood documentary using licensed Wikimedia archival images, free Piper TTS and Remotion (no paid API)."
+        required: false
+        type: boolean
+        default: false
   push:
     paths:
+      - "data/production-topic.txt"
       - "src/**"
       - "package.json"
       - "package-lock.json"
@@ -23,11 +29,50 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install OpenMontage reference-analysis dependencies
+        if: ${{ inputs.reference_urls != '' || inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood')) }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install -r vendor/OpenMontage/requirements.txt yt-dlp youtube-transcript-api "scenedetect[opencv]"
+          if [ "${{ inputs.offline_production || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary')) }}" = "true" ]; then python -m pip install piper-tts; fi
+      - name: Install offline TTS runtime
+        if: ${{ inputs.offline_production || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary')) }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install piper-tts
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - run: npm install
       - run: npm test
+      - name: Syntax-check OpenMontage Python adapters
+        run: python -m py_compile scripts/openmontage_reference_analyzer.py scripts/openmontage_asset_search.py
+      - name: Download free Piper English voice model
+        if: ${{ inputs.offline_production || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary')) }}
+        run: |
+          mkdir -p voices
+          curl -fL --retry 3 "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx" -o voices/en_US-lessac-medium.onnx
+          curl -fL --retry 3 "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json" -o voices/en_US-lessac-medium.onnx.json
+          test -s voices/en_US-lessac-medium.onnx
+          test -s voices/en_US-lessac-medium.onnx.json
+      - name: Prepare offline documentary with licensed archival images and local narration
+        if: ${{ inputs.offline_production || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary')) }}
+        run: node scripts/prepare-offline-documentary.mjs
+      - name: Render offline documentary
+        if: ${{ success() && (inputs.offline_production || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary'))) }}
+        run: npx remotion render src/index.ts Documentary out/documentary.mp4 --props=public/project/props.json --codec=h264 --crf=22 --pixel-format=yuv420p --concurrency=2
+      - name: Verify offline documentary video, audio, duration and asset provenance
+        if: ${{ success() && (inputs.offline_production || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary'))) }}
+        run: npm run qa:render
       - name: Save supplied YouTube reference links
         if: ${{ inputs.reference_urls != '' }}
         env:
@@ -39,34 +84,103 @@ jobs:
             const profile = await saveReferenceProfile(urls);
             console.log(`Saved ${profile.referenceCount} reference URLs. Visual style is not yet analyzed.`);
           '
-      - name: Analyze reference thumbnails with AI (limited evidence)
+      - name: Analyze full reference videos with OpenMontage
         if: ${{ inputs.reference_urls != '' }}
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
-        run: node src/reference-style-analysis.mjs data/channel-profile.json
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4.1-mini' }}
+        run: node src/reference-video-analysis.mjs
+      - name: Resolve Telegram chat from the bot's incoming message
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then echo "Telegram token not configured; notifications will be skipped."; exit 0; fi
+          response=$(curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates")
+          ok=$(printf '%s' "$response" | jq -r '.ok // false')
+          if [ "$ok" != "true" ]; then
+            description=$(printf '%s' "$response" | jq -r '.description // "Unknown Telegram API error"')
+            echo "::warning::Telegram getUpdates failed: $description"
+            exit 0
+          fi
+          chat_id=$(printf '%s' "$response" | jq -r '[.result[]? | select(.message.chat.type == "private") | .message.chat.id] | last // empty')
+          if [ -z "$chat_id" ]; then
+            echo "::warning::No private Telegram chat update found yet; production will continue without Telegram delivery."
+            exit 0
+          fi
+          echo "TELEGRAM_CHAT_ID=$chat_id" >> "$GITHUB_ENV"
+          echo "Telegram private chat detected; chat ID stored for this workflow only."
+      - name: Send a direct Telegram test message
+        if: ${{ env.TELEGRAM_CHAT_ID != '' }}
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ env.TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          response=$(curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" --data-urlencode "chat_id=$TELEGRAM_CHAT_ID" --data-urlencode "text=✅ اختبار الاتصال ناجح. وصلنا إلى بوتك Michkatt، وسيتم إرسال البحث والسيناريو وقرارات المخرج هنا عند اكتمال الإنتاج.")
+          ok=$(printf '%s' "$response" | jq -r '.ok // false')
+          if [ "$ok" != "true" ]; then
+            description=$(printf '%s' "$response" | jq -r '.description // "Unknown Telegram API error"')
+            echo "::warning::Telegram test message was rejected: $description"
+            exit 1
+          fi
+          echo "Telegram test message accepted by Telegram API."
       - name: Generate AI-directed scenes, stock footage, and voice narration
-        if: ${{ inputs.production_script != '' }}
+        if: ${{ !inputs.offline_production && !(github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary')) && (inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood'))) }}
         env:
           SCRIPT_TEXT: ${{ inputs.production_script }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
-          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
-          TTS_VOICE: ${{ secrets.TTS_VOICE }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4.1-mini' }}
+          OPENAI_RESEARCH_MODEL: ${{ secrets.OPENAI_RESEARCH_MODEL || 'gpt-4.1-mini' }}
+          TTS_VOICE: ${{ secrets.TTS_VOICE || 'alloy' }}
         run: |
-          if [ -z "$OPENAI_API_KEY" ] || [ -z "$PEXELS_API_KEY" ]; then
-            echo "::error::Production mode requires OPENAI_API_KEY and PEXELS_API_KEY in repository Actions secrets."
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Production mode requires OPENAI_API_KEY in repository Actions secrets."
             exit 1
           fi
-          node --input-type=module -e 'import {writeFile} from "node:fs/promises"; await writeFile("production-topic.txt", process.env.SCRIPT_TEXT);'
+          if [ -n "$SCRIPT_TEXT" ]; then
+            printf "%s" "$SCRIPT_TEXT" > production-topic.txt
+          else
+            cp data/production-topic.txt production-topic.txt
+          fi
+          echo "Using research model: ${OPENAI_RESEARCH_MODEL}; production model: ${OPENAI_MODEL}"
           node src/production-agent.mjs production-topic.txt
           npm run render:project
       - name: Verify production render and project asset provenance
-        if: ${{ inputs.production_script != '' }}
+        if: ${{ !inputs.offline_production && !(github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary')) && (inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood'))) }}
         run: npm run qa:render
+      - name: Deliver research, script and director blueprint to Telegram
+        if: ${{ success() && (inputs.production_script != '' || inputs.offline_production || (github.event_name == 'push' && (contains(github.event.head_commit.message, 'Great Molasses Flood') || contains(github.event.head_commit.message, 'Enable offline documentary')))) && env.TELEGRAM_CHAT_ID != '' }}
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ env.TELEGRAM_CHAT_ID }}
+        run: node src/telegram-notify.mjs
       - name: Render the technical demo when no script was supplied
-        if: ${{ inputs.production_script == '' }}
+        if: ${{ inputs.production_script == '' && !inputs.offline_production && !(github.event_name == 'push' && (contains(github.event.head_commit.message, 'Great Molasses Flood') || contains(github.event.head_commit.message, 'Enable offline documentary'))) }}
         run: npm run render:demo
+      - name: Send technical demo video to Telegram
+        if: ${{ success() && inputs.production_script == '' && !inputs.offline_production && !(github.event_name == 'push' && (contains(github.event.head_commit.message, 'Great Molasses Flood') || contains(github.event.head_commit.message, 'Enable offline documentary'))) && env.TELEGRAM_CHAT_ID != '' }}
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ env.TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          test -s out/demo.mp4
+          size=$(stat -c%s out/demo.mp4)
+          if [ "$size" -gt 49000000 ]; then echo "::warning::Demo exceeds Telegram's 49 MB bot upload limit."; exit 1; fi
+          response=$(curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" -F "chat_id=${TELEGRAM_CHAT_ID}" -F "document=@out/demo.mp4;type=video/mp4" -F "caption=🎬 الفيديو التجريبي التقني لمحرك المونتاج (Remotion). هذا اختبار تقني وليس الوثائقي النهائي.")
+          ok=$(printf '%s' "$response" | jq -r '.ok // false')
+          if [ "$ok" != "true" ]; then
+            description=$(printf '%s' "$response" | jq -r '.description // "Unknown Telegram API error"')
+            echo "::error::Telegram rejected demo video: $description"
+            exit 1
+          fi
+          echo "Telegram accepted demo video document: $(printf '%s' "$response" | jq -r '.result.document.file_name // "video"')"
       - name: Upload reference profile
         if: hashFiles('data/channel-profile.json') != ''
         uses: actions/upload-artifact@v4
@@ -76,11 +190,11 @@ jobs:
       - name: Upload generated documentary
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.production_script != '' && 'generated-documentary' || 'documentary-demo-mp4' }}
-          path: ${{ inputs.production_script != '' && 'out/documentary.mp4' || 'out/demo.mp4' }}
+          name: ${{ (inputs.production_script != '' || inputs.offline_production || (github.event_name == 'push' && (contains(github.event.head_commit.message, 'Great Molasses Flood') || contains(github.event.head_commit.message, 'Enable offline documentary')))) && 'generated-documentary' || 'documentary-demo-mp4' }}
+          path: ${{ (inputs.production_script != '' || inputs.offline_production || (github.event_name == 'push' && (contains(github.event.head_commit.message, 'Great Molasses Flood') || contains(github.event.head_commit.message, 'Enable offline documentary')))) && 'out/documentary.mp4' || 'out/demo.mp4' }}
           if-no-files-found: error
       - name: Upload project files and asset provenance
-        if: ${{ inputs.production_script != '' }}
+        if: ${{ !inputs.offline_production && !(github.event_name == 'push' && contains(github.event.head_commit.message, 'Enable offline documentary')) && (inputs.production_script != '' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'Great Molasses Flood'))) }}
         uses: actions/upload-artifact@v4
         with:
           name: documentary-project-source

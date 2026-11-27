@@ -1,0 +1,475 @@
+{
+  "title": "The Great Molasses Flood of 1919",
+  "schemaVersion": 1,
+  "status": "director_blueprint_prepared_assets_pending",
+  "targetDurationSeconds": 138,
+  "hardMaximumSeconds": 180,
+  "format": "16:9 documentary, English narration, Western YouTube audience",
+  "creativeApproach": "Archival-first historical documentary. The visual language moves from quiet observational frames to a short, controlled rupture sequence, then slows for rescue, loss, accountability and reflection.",
+  "visualRules": [
+    "Prioritize Boston City Archives, Boston Public Library, and other clearly rights-labeled historical images.",
+    "Label maps, diagrams, and any generated reconstruction as explanatory graphics.",
+    "Do not use unrelated stock footage as if it depicts the 1919 event.",
+    "Keep motion subtle on archival stills; use cuts for evidence and dissolves for reflection.",
+    "Use restrained typography, warm archival neutrals, charcoal backgrounds, and amber accents.",
+    "No sensational gore, invented eyewitness shots, or unsupported numerical claims."
+  ],
+  "scenes": [
+    {
+      "id": "01",
+      "title": "Cold open: the sound",
+      "durationSeconds": 12,
+      "narration": "In January 1919, one of Boston's strangest disasters began with a sound residents thought might be a train.",
+      "visualQuery": "A quiet 1919 North End street; distant elevated train silhouette; sudden metallic shudder interrupts stillness.",
+      "visual": {
+        "kind": "video",
+        "src": "",
+        "assetStatus": "not_acquired",
+        "instruction": "A quiet 1919 North End street; distant elevated train silhouette; sudden metallic shudder interrupts stillness."
+      },
+      "motion": {
+        "enter": "fade",
+        "scaleFrom": 1.04,
+        "editorialInstruction": "Slow push-in, then a sharp 6-frame cut on the rupture sound. Minimal title: “BOSTON, 1919”."
+      },
+      "transition": {
+        "kind": "cut",
+        "durationFrames": 10
+      },
+      "style": {
+        "fontFamily": "Arial",
+        "titleColor": "#F4F1E8",
+        "captionColor": "#FFFFFF",
+        "titleSize": 66,
+        "titleAlign": "left",
+        "titleTop": 620,
+        "palette": [
+          "#111820",
+          "#D8A35D",
+          "#F4F1E8"
+        ]
+      },
+      "captions": [],
+      "audio": [],
+      "editorialNotes": "Use verified archival imagery or a clearly labeled reconstruction. Never present generated visuals as authentic 1919 photographs."
+    },
+    {
+      "id": "02",
+      "title": "The tank above the neighborhood",
+      "durationSeconds": 12,
+      "narration": "On Commercial Street, in the city's North End, a steel tank stood beside homes, workplaces, and an elevated railway. It was roughly five stories tall, and it held millions of gallons of industrial molasses.",
+      "visualQuery": "Historically grounded archival photograph of the Commercial Street tank; map locator from Boston Harbor to the North End.",
+      "visual": {
+        "kind": "video",
+        "src": "",
+        "assetStatus": "not_acquired",
+        "instruction": "Historically grounded archival photograph of the Commercial Street tank; map locator from Boston Harbor to the North End."
+      },
+      "motion": {
+        "enter": "fade",
+        "scaleFrom": 1.04,
+        "editorialInstruction": "Slow vertical reveal from street level to tank top; restrained map label and date."
+      },
+      "transition": {
+        "kind": "cut",
+        "durationFrames": 10
+      },
+      "style": {
+        "fontFamily": "Arial",
+        "titleColor": "#F4F1E8",
+        "captionColor": "#FFFFFF",
+        "titleSize": 66,
+        "titleAlign": "left",
+        "titleTop": 620,
+        "palette": [
+          "#111820",
+          "#D8A35D",
+          "#F4F1E8"
+        ]
+      },
+      "captions": [],
+      "audio": [],
+      "editorialNotes": "Use verified archival imagery or a clearly labeled reconstruction. Never present generated visuals as authentic 1919 photographs."
+    },
+    {
+      "id": "03",
+      "title": "A warning hiding in plain sight",
+      "durationSeconds": 12,
+      "narration": "The tank belonged to Purity Distilling Company. Built only a few years earlier, it had already become part of everyday neighborhood life. Residents had seen it leak. Some remembered the metal groaning when it was full. Those warning signs did not stop the tank from being used.",
+      "visualQuery": "Close archival details of riveted steel seams, period street photographs, and a simple labeled tank cross-section.",
+      "visual": {
+        "kind": "video",
+        "src": "",
+        "assetStatus": "not_acquired",
+        "instruction": "Close archival details of riveted steel seams, period street photographs, and a simple labeled tank cross-section."
+      },
+      "motion": {
+        "enter": "fade",
+        "scaleFrom": 1.04,
+        "editorialInstruction": "Measured 3-shot sequence; subtle parallax on stills; highlight seams in muted amber."
+      },
+      "transition": {
+        "kind": "cut",
+        "durationFrames": 10
+      },
+      "style": {
+        "fontFamily": "Arial",
+        "titleColor": "#F4F1E8",
+        "captionColor": "#FFFFFF",
+        "titleSize": 66,
+        "titleAlign": "left",
+        "titleTop": 620,
+        "palette": [
+          "#111820",
+          "#D8A35D",
+          "#F4F1E8"
+        ]
+      },
+      "captions": [],
+      "audio": [],
+      "editorialNotes": "Use verified archival imagery or a clearly labeled reconstruction. Never present generated visuals as authentic 1919 photographs."
+    },
+    {
+      "id": "04",
+      "title": "The rupture",
+      "durationSeconds": 10,
+      "narration": "Just after midday on January fifteenth, the structure ruptured.",
+      "visualQuery": "Archival aftermath image of the split tank; restrained animated diagram showing the wall opening, explicitly labeled reconstruction.",
+      "visual": {
+        "kind": "video",
+        "src": "",
+        "assetStatus": "not_acquired",
+        "instruction": "Archival aftermath image of the split tank; restrained animated diagram showing the wall opening, explicitly labeled reconstruction."
+      },
+      "motion": {
+        "enter": "fade",
+        "scaleFrom": 1.04,
+        "editorialInstruction": "Hold for one beat, then cut to a simplified plan-view flow animation; no fabricated eyewitness POV."
+      },
+      "transition": {
+        "kind": "cut",
+        "durationFrames": 10
+      },
+      "style": {
+        "fontFamily": "Arial",
+        "titleColor": "#F4F1E8",
+        "captionColor": "#FFFFFF",
+        "titleSize": 66,
+        "titleAlign": "left",
+        "titleTop": 620,
+        "palette": [
+          "#111820",
+          "#D8A35D",
+          "#F4F1E8"
+        ]
+      },
+      "captions": [],
+      "audio": [],
+      "editorialNotes": "Use verified archival imagery or a clearly labeled reconstruction. Never present generated visuals as authentic 1919 photographs."
+    },
+    {
+      "id": "05",
+      "title": "A wave through Commercial Street",
+      "durationSeconds": 12,
+      "narration": "Around 2.3 million gallons of molasses burst into the streets. The dark wave tore through the waterfront district, smashing buildings, sweeping away vehicles, and damaging the elevated railway. A nearby firehouse was badly hit.",
+      "visualQuery": "Authentic 1919 aftermath photographs: debris, damaged buildings, elevated railway; no modern disaster footage.",
+      "visual": {
+        "kind": "video",
+        "src": "",
+        "assetStatus": "not_acquired",
+        "instruction": "Authentic 1919 aftermath photographs: debris, damaged buildings, elevated railway; no modern disaster footage."
+      },
+      "motion": {
+        "enter": "fade",
+        "scaleFrom": 1.04,
+        "editorialInstruction": "Fast 3-shot montage, 2.5–3 seconds per image; pan across documented damage."
+      },
+      "transition": {
+        "kind": "cut",
+        "durationFrames": 10
+      },
+      "style": {
+        "fontFamily": "Arial",
+        "titleColor": "#F4F1E8",
+        "captionColor": "#FFFFFF",
+        "titleSize": 66,
+        "titleAlign": "left",
+        "titleTop": 620,
+        "palette": [
+          "#111820",
+          "#D8A35D",
+          "#F4F1E8"
+        ]
+      },
+      "captions": [],
+      "audio": [],
+      "editorialNotes": "Use verified archival imagery or a clearly labeled reconstruction. Never present generated visuals as authentic 1919 photographs."
+    },
+    {
+      "id": "06",
+      "title": "Not a harmless flood",
+      "durationSeconds": 12,
+      "narration": "This was not a harmless flood of syrup. The moving mass trapped people and animals. As it spread, debris became entangled in the thick liquid, making escape and rescue extraordinarily difficult.",
+      "visualQuery": "Archival rescue and street-cleanup photographs; simple top-down route map with affected blocks.",
+      "visual": {
+        "kind": "video",
+        "src": "",
+        "assetStatus": "not_acquired",
+        "instruction": "Archival rescue and street-cleanup photographs; simple top-down route map with affected blocks."
+      },
+      "motion": {
+        "enter": "fade",
+        "scaleFrom": 1.04,
+        "editorialInstruction": "Slow down the cutting; lower contrast; let the images breathe; no graphic reenactments."
+      },
+      "transition": {
+        "kind": "cut",
+        "durationFrames": 10
+      },
+      "style": {
+        "fontFamily": "Arial",
+        "titleColor": "#F4F1E8",
+        "captionColor": "#FFFFFF",
+        "titleSize": 66,
+        "titleAlign": "left",
+        "titleTop": 620,
+        "palette": [
+          "#111820",
+          "#D8A35D",
+          "#F4F1E8"
+        ]
+      },
+      "captions": [],
+      "audio": [],
+      "editorialNotes": "Use verified archival imagery or a clearly labeled reconstruction. Never present generated visuals as authentic 1919 photographs."
+    },
+    {
+      "id": "07",
+      "title": "The rescue",
+      "durationSeconds": 12,
+      "narration": "Police, firefighters, Red Cross workers, volunteers, and naval cadets rushed to help. They searched wreckage and worked through the night.",
+      "visualQuery": "Period photographs of police, sailors, firefighters, and volunteers; source captions retained where available.",
+      "visual": {
+        "kind": "video",
+        "src": "",
+        "assetStatus": "not_acquired",
+        "instruction": "Period photographs of police, sailors, firefighters, and volunteers; source captions retained where available."
+      },
+      "motion": {
+        "enter": "fade",
+        "scaleFrom": 1.04,
+        "editorialInstruction": "Alternating medium and close archival frames; gentle push-ins; warmer highlights, respectful tone."
+      },
+      "transition": {
+        "kind": "cut",
+        "durationFrames": 10
+      },
+      "style": {
+        "fontFamily": "Arial",
+        "titleColor": "#F4F1E8",
+        "captionColor": "#FFFFFF",
+        "titleSize": 66,
+        "titleAlign": "left",
+        "titleTop": 620,
+        "palette": [
+          "#111820",
+          "#D8A35D",
+          "#F4F1E8"
+        ]
+      },
+      "captions": [],
+      "audio": [],
+      "editorialNotes": "Use verified archival imagery or a clearly labeled reconstruction. Never present generated visuals as authentic 1919 photographs."
+    },
+    {
+      "id": "08",
+      "title": "The human toll",
+      "durationSeconds": 10,
+      "narration": "The final toll was devastating: twenty-one people died, and around one hundred and fifty were injured.",
+      "visualQuery": "Memorial-style black frame with names only if verified; restrained typography: “21 lives lost / 150 injured”.",
+      "visual": {
+        "kind": "video",
+        "src": "",
+        "assetStatus": "not_acquired",
+        "instruction": "Memorial-style black frame with names only if verified; restrained typography: “21 lives lost / 150 injured”."
+      },
+      "motion": {
+        "enter": "fade",
+        "scaleFrom": 1.04,
+        "editorialInstruction": "No dramatic effects; 2-second silence before the statistic appears; slow fade."
+      },
+      "transition": {
+        "kind": "cut",
+        "durationFrames": 10
+      },
+      "style": {
+        "fontFamily": "Arial",
+        "titleColor": "#F4F1E8",
+        "captionColor": "#FFFFFF",
+        "titleSize": 66,
+        "titleAlign": "left",
+        "titleTop": 620,
+        "palette": [
+          "#111820",
+          "#D8A35D",
+          "#F4F1E8"
+        ]
+      },
+      "captions": [],
+      "audio": [],
+      "editorialNotes": "Use verified archival imagery or a clearly labeled reconstruction. Never present generated visuals as authentic 1919 photographs."
+    },
+    {
+      "id": "09",
+      "title": "The cleanup",
+      "durationSeconds": 12,
+      "narration": "In the days that followed, crews faced another problem. The molasses hardened in the winter air. Workers pumped seawater through the streets and hauled away debris, but cleanup took weeks.",
+      "visualQuery": "Archival cleanup images and a restrained diagram of seawater flushing streets and debris removal.",
+      "visual": {
+        "kind": "video",
+        "src": "",
+        "assetStatus": "not_acquired",
+        "instruction": "Archival cleanup images and a restrained diagram of seawater flushing streets and debris removal."
+      },
+      "motion": {
+        "enter": "fade",
+        "scaleFrom": 1.04,
+        "editorialInstruction": "Rhythmic sequence of stills with slow lateral movement; transition from brown to neutral monochrome."
+      },
+      "transition": {
+        "kind": "cut",
+        "durationFrames": 10
+      },
+      "style": {
+        "fontFamily": "Arial",
+        "titleColor": "#F4F1E8",
+        "captionColor": "#FFFFFF",
+        "titleSize": 66,
+        "titleAlign": "left",
+        "titleTop": 620,
+        "palette": [
+          "#111820",
+          "#D8A35D",
+          "#F4F1E8"
+        ]
+      },
+      "captions": [],
+      "audio": [],
+      "editorialNotes": "Use verified archival imagery or a clearly labeled reconstruction. Never present generated visuals as authentic 1919 photographs."
+    },
+    {
+      "id": "10",
+      "title": "The investigation",
+      "durationSeconds": 12,
+      "narration": "The disaster also triggered a major legal investigation. Families and survivors pursued claims against the company.",
+      "visualQuery": "Historic courtroom/newspaper material where rights permit; timeline graphic of claims and inquiry.",
+      "visual": {
+        "kind": "video",
+        "src": "",
+        "assetStatus": "not_acquired",
+        "instruction": "Historic courtroom/newspaper material where rights permit; timeline graphic of claims and inquiry."
+      },
+      "motion": {
+        "enter": "fade",
+        "scaleFrom": 1.04,
+        "editorialInstruction": "Graphic timeline, clean sans-serif typography, no invented courtroom reenactment."
+      },
+      "transition": {
+        "kind": "cut",
+        "durationFrames": 10
+      },
+      "style": {
+        "fontFamily": "Arial",
+        "titleColor": "#F4F1E8",
+        "captionColor": "#FFFFFF",
+        "titleSize": 66,
+        "titleAlign": "left",
+        "titleTop": 620,
+        "palette": [
+          "#111820",
+          "#D8A35D",
+          "#F4F1E8"
+        ]
+      },
+      "captions": [],
+      "audio": [],
+      "editorialNotes": "Use verified archival imagery or a clearly labeled reconstruction. Never present generated visuals as authentic 1919 photographs."
+    },
+    {
+      "id": "11",
+      "title": "What failed",
+      "durationSeconds": 10,
+      "narration": "The inquiry exposed serious failures in the tank's design and construction.",
+      "visualQuery": "Engineering diagram of tank shell and riveted seams; label as explanatory reconstruction, not original engineering drawing.",
+      "visual": {
+        "kind": "video",
+        "src": "",
+        "assetStatus": "not_acquired",
+        "instruction": "Engineering diagram of tank shell and riveted seams; label as explanatory reconstruction, not original engineering drawing."
+      },
+      "motion": {
+        "enter": "fade",
+        "scaleFrom": 1.04,
+        "editorialInstruction": "Slow technical push-in; highlight design/construction issues; avoid asserting one unproven fracture mechanism."
+      },
+      "transition": {
+        "kind": "cut",
+        "durationFrames": 10
+      },
+      "style": {
+        "fontFamily": "Arial",
+        "titleColor": "#F4F1E8",
+        "captionColor": "#FFFFFF",
+        "titleSize": 66,
+        "titleAlign": "left",
+        "titleTop": 620,
+        "palette": [
+          "#111820",
+          "#D8A35D",
+          "#F4F1E8"
+        ]
+      },
+      "captions": [],
+      "audio": [],
+      "editorialNotes": "Use verified archival imagery or a clearly labeled reconstruction. Never present generated visuals as authentic 1919 photographs."
+    },
+    {
+      "id": "12",
+      "title": "The lesson",
+      "durationSeconds": 12,
+      "narration": "The Great Molasses Flood is remembered for its bizarre image: a city street overwhelmed by something sweet. But its real lesson is not about molasses. It is about ignored warnings, weak engineering, and the human cost when industrial safety is treated as an afterthought.",
+      "visualQuery": "Present-day North End location only if clearly labeled as present day; close on empty street and title card.",
+      "visual": {
+        "kind": "video",
+        "src": "",
+        "assetStatus": "not_acquired",
+        "instruction": "Present-day North End location only if clearly labeled as present day; close on empty street and title card."
+      },
+      "motion": {
+        "enter": "fade",
+        "scaleFrom": 1.04,
+        "editorialInstruction": "Long dissolve; music resolves; final title: “WHEN WARNINGS ARE IGNORED”."
+      },
+      "transition": {
+        "kind": "cut",
+        "durationFrames": 10
+      },
+      "style": {
+        "fontFamily": "Arial",
+        "titleColor": "#F4F1E8",
+        "captionColor": "#FFFFFF",
+        "titleSize": 66,
+        "titleAlign": "left",
+        "titleTop": 620,
+        "palette": [
+          "#111820",
+          "#D8A35D",
+          "#F4F1E8"
+        ]
+      },
+      "captions": [],
+      "audio": [],
+      "editorialNotes": "Use verified archival imagery or a clearly labeled reconstruction. Never present generated visuals as authentic 1919 photographs."
+    }
+  ]
+}
