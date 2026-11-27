@@ -19,10 +19,16 @@ async function github(path,body){
  return response.status===204?null:response.json();
 }
 await mkdir("data",{recursive:true});
-let offset=0;
-try{offset=Number((await readFile(offsetFile,"utf8")).trim())||0;}catch{}
+let offset=0,initialized=true;
+try{offset=Number((await readFile(offsetFile,"utf8")).trim())||0;}catch{initialized=false;}
 const updates=await telegram("getUpdates",{offset,limit:100,timeout:0,allowed_updates:["message"]});
 let nextOffset=offset;
+if(!initialized){
+ for(const update of updates)nextOffset=Math.max(nextOffset,update.update_id+1);
+ await writeFile(offsetFile,String(nextOffset)+"\\n");
+ console.log(`Initialized Telegram inbox checkpoint at ${nextOffset}; skipped ${updates.length} older updates to avoid replaying historic messages.`);
+ process.exit(0);
+}
 for(const update of updates){
  nextOffset=Math.max(nextOffset,update.update_id+1);
  const msg=update.message;
