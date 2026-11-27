@@ -25,7 +25,7 @@ export async function sendProductionBundle({token,chatId,projectDir="public/proj
  const upload=async(filename,content,caption)=>{const form=new FormData();form.append("chat_id",String(chatId));form.append("document",new Blob([content],{type:"application/json"}),filename);if(caption)form.append("caption",caption);await send("sendDocument",form);};
  await upload("research-report.json",research,"1/4 — Research report with source URLs");
  await upload("english-script.txt",script,"2/4 — English documentary narration");
- await upload("director-blueprint.json",blueprint,"3/4 — Scene-by-scene AI Director decisions for the renderer");
+ await upload("director-blueprint.json",blueprint,"3/4 — Editorial scene-by-scene director blueprint; footage assets are still pending.");
  await upload("sources.md",sources,"4/4 — Research source list");
  return {sent:4,chatId:String(chatId)};
 }
