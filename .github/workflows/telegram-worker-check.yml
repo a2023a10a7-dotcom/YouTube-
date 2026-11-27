@@ -1,0 +1,32 @@
+name: Telegram webhook worker checks
+on:
+  push:
+    branches: [main]
+    paths:
+      - "workers/telegram/**"
+      - ".github/workflows/telegram-worker-check.yml"
+  pull_request:
+    paths:
+      - "workers/telegram/**"
+      - ".github/workflows/telegram-worker-check.yml"
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workers/telegram
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workers/telegram/package.json
+      - name: Install Worker dependencies
+        run: npm install --no-audit --no-fund
+      - name: Check JavaScript syntax
+        run: node --check src/index.js
+      - name: Validate Cloudflare Worker bundle
+        run: npx wrangler deploy --dry-run
