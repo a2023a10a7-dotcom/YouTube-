@@ -22,7 +22,7 @@ const SceneView:React.FC<{scene:SceneBlueprint;index:number;start:number}> = ({s
  const accent=visual.accent??"#7CE7D4";
  const background=visual.background??"#080D18";
  return <AbsoluteFill style={{background,color:"#F4F7FB",overflow:"hidden",opacity,transform:transitionTransform,clipPath:transitionClip}}>
-  {visual.kind==="video" && <Video src={projectAsset(visual.src)} style={{width:"100%",height:"100%",objectFit:"cover",transform:`scale(${zoom})`}} />}
+  {visual.kind==="video" && <Video muted src={projectAsset(visual.src)} style={{width:"100%",height:"100%",objectFit:"cover",transform:`scale(${zoom})`}} />}
   {visual.kind==="image" && <Img src={projectAsset(visual.src)} style={{width:"100%",height:"100%",objectFit:"cover",transform:`scale(${zoom})`}} />}
   {visual.kind==="graphic" && <AbsoluteFill style={{background}}>
     <AbsoluteFill style={{opacity:.16,backgroundImage:"linear-gradient(rgba(124,231,212,.16) 1px, transparent 1px),linear-gradient(90deg, rgba(124,231,212,.16) 1px, transparent 1px)",backgroundSize:"80px 80px",transform:`scale(${zoom})`}} />
