@@ -3,6 +3,11 @@ on:
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/telegram-inbox.mjs"
+      - ".github/workflows/telegram-inbox.yml"
 permissions:
   contents: write
   actions: write
