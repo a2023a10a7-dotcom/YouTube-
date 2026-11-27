@@ -3,11 +3,13 @@ export type AudioLayer = {src:string; startSeconds?:number; durationSeconds?:num
 export type Visual =
  | {kind:"graphic"; background:string; accent:string; eyebrow?:string; title:string; subtitle?:string}
  | {kind:"video"|"image"; src:string; background?:string; accent?:string; eyebrow?:string; title?:string; subtitle?:string};
+export type SceneStyle = {fontFamily?:string; titleColor?:string; captionColor?:string; titleSize?:number; titleAlign?:"left"|"center"|"right"; titleTop?:number};
+export type Soundtrack = {src:string; volume?:number; duckingVolume?:number; fadeInSeconds?:number; fadeOutSeconds?:number};
 export type SceneBlueprint = {
  id:string; durationSeconds:number; visual:Visual;
  motion?:{enter?:"rise-fade"|"fade"|"none";exit?:"fade"|"none";scaleFrom?:number};
  transition?:{kind:"fade"|"cut"|"wipe"|"slide"|"zoom";durationFrames?:number};
- audio?:AudioLayer[]; captions?:CaptionCue[];
+ audio?:AudioLayer[]; captions?:CaptionCue[]; style?:SceneStyle;
 };
 export const demoBlueprint:SceneBlueprint[]=[
  {id:"opening",durationSeconds:5,visual:{kind:"graphic",background:"#080D18",accent:"#7CE7D4",eyebrow:"THE HIDDEN ENGINE",title:"THE WORLD\nIN NUMBERS",subtitle:"A visual story, built frame by frame"},motion:{enter:"rise-fade",exit:"fade",scaleFrom:1.04},transition:{kind:"fade",durationFrames:12},audio:[],captions:[]},
