@@ -35,7 +35,7 @@ async function searchCommons(query,outputPath){
  const data=await r.json();const pages=Object.values(data.query?.pages??{}).map(p=>{const info=p.imageinfo?.[0],meta=info?.extmetadata??{};const license=clean(meta.LicenseShortName?.value);return {title:p.title,info,license,description:clean(meta.ImageDescription?.value),artist:clean(meta.Artist?.value),licenseUrl:meta.LicenseUrl?.value??"",sourceUrl:"https://commons.wikimedia.org/wiki/"+encodeURIComponent(p.title.replaceAll(" ","_"))};}).filter(x=>x.info?.thumburl&&allowed(x.license)&&Math.max(x.info.width??0,x.info.thumbwidth??0)>=700);
  const best=pages.map(p=>({...p,score:overlap(query,p.title+" "+p.description)})).sort((a,b)=>b.score-a.score||((b.info.width??0)-(a.info.width??0)))[0];
  if(!best||best.score<0.04)return null;
- const ext=extname(new URL(best.info.thumburl).pathname)||".jpg";const path=outputPath.replace(/\\.[^.]+$/,"")+ext;
+ const ext=extname(new URL(best.info.thumburl).pathname)||".jpg";const path=outputPath.replace(/\.[^.]+$/,"")+ext;
  await download(best.info.thumburl,path);
  return {path,kind:"image",source:"Wikimedia Commons",sourceUrl:best.sourceUrl,license:best.license+" — "+best.licenseUrl,creator:best.artist||"See Commons file page",title:best.title,score:best.score};
 }
