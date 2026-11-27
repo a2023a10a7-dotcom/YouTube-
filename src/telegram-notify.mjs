@@ -1,4 +1,4 @@
-import {readFile} from "node:fs/promises";
+import {readFile,stat} from "node:fs/promises";
 
 const API="https://api.telegram.org";
 async function telegram(method,token,body){
@@ -27,7 +27,9 @@ export async function sendProductionBundle({token,chatId,projectDir="public/proj
  await upload("english-script.txt",script,"2/4 — English documentary narration");
  await upload("director-blueprint.json",blueprint,"3/4 — Editorial scene-by-scene director blueprint; footage assets are still pending.");
  await upload("sources.md",sources,"4/4 — Research source list");
- return {sent:4,chatId:String(chatId)};
+ let videoSent=false;
+ try{const videoPath="out/documentary.mp4";const info=await stat(videoPath);if(info.size<49*1024*1024){const bytes=await readFile(videoPath);const form=new FormData();form.append("chat_id",String(chatId));form.append("document",new Blob([bytes],{type:"video/mp4"}),"The-Great-Molasses-Flood-1919.mp4");form.append("caption","🎬 Rendered documentary MP4 — QA passed. Download and review before publication.");await send("sendDocument",form);videoSent=true;}else{await send("sendMessage",new URLSearchParams({chat_id:String(chatId),text:"The rendered MP4 exceeds the Telegram upload limit. Download it from the GitHub Actions artifact instead."}));}}catch(error){if(error.code!=="ENOENT")throw error;}
+ return {sent:4,videoSent,chatId:String(chatId)};
 }
 if(import.meta.url===new URL(process.argv[1]??"", "file://"+process.cwd()+"/").href){
  sendProductionBundle({token:process.env.TELEGRAM_BOT_TOKEN,chatId:process.env.TELEGRAM_CHAT_ID}).then(x=>console.log("Telegram delivery complete:",x)).catch(e=>{console.error(e.message);process.exitCode=1;});
